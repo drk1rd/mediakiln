@@ -216,3 +216,54 @@ describe("optimize() on the fixture site (images)", () => {
     expect(html).not.toContain("loader.js");
   });
 });
+
+describe("cache", () => {
+  const sites: Array<Awaited<ReturnType<typeof makeSite>>> = [];
+  afterAll(() => sites.forEach((s) => s.cleanup()));
+
+  it("a second build of an unchanged site does zero encodes", async () => {
+    const a = await makeSite();
+    const b = await makeSite();
+    sites.push(a, b);
+    const cacheDir = path.join(a.root, "cache");
+    const opts = { configFile: false as const, cacheDir, video: FAST, logger: silentLogger };
+
+    const t1 = Date.now();
+    const cold = await optimize({ ...opts, dir: a.dir });
+    const coldMs = Date.now() - t1;
+    expect(cold.failures).toEqual([]);
+    expect(cold.videos.processed).toBeGreaterThan(0);
+    expect(cold.images.processed).toBeGreaterThan(0);
+    expect(existsSync(cacheDir)).toBe(true);
+
+    // Fresh copy of the raw site (as in CI): everything comes from the cache.
+    const t2 = Date.now();
+    const warm = await optimize({ ...opts, dir: b.dir });
+    const warmMs = Date.now() - t2;
+    expect(warm.failures).toEqual([]);
+    expect(warm.videos.processed).toBe(0);
+    expect(warm.images.processed).toBe(0);
+    expect(warm.videos.cached).toBe(cold.videos.processed);
+    expect(warm.images.cached).toBe(cold.images.processed);
+    expect(warmMs).toBeLessThan(coldMs);
+    expect(warm.videos.bytesAfter).toBe(cold.videos.bytesAfter);
+
+    const html = (d: string) => readFileSync(path.join(d, "index.html"), "utf8");
+    expect(html(b.dir)).toBe(html(a.dir));
+  });
+
+  it("--no-cache writes no cache directory", async () => {
+    const c = await makeSite();
+    sites.push(c);
+    const cacheDir = path.join(c.root, "nocache");
+    await optimize({
+      dir: c.dir,
+      configFile: false,
+      cache: false,
+      cacheDir,
+      video: { enabled: false },
+      logger: silentLogger,
+    });
+    expect(existsSync(cacheDir)).toBe(false);
+  });
+});

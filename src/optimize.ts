@@ -268,7 +268,8 @@ async function runJob(
     planned.outcome = await materialize(
       { outRoot: ctx.outRoot, cacheDir: ctx.cacheDir, key, hash, source: rel },
       (tmp): Promise<AssetResult> => {
-        ctx.logger.info(`${job.kind === "video" ? "encoding" : "processing"} ${rel}`);
+        const verb = { video: "encoding", image: "processing", poster: "processing poster" };
+        ctx.logger.info(`${verb[job.kind]} ${rel}`);
         switch (job.kind) {
           case "video":
             return processVideo(

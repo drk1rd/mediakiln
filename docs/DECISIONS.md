@@ -81,3 +81,19 @@ Notes on places where the implementation differs from, or fills gaps in, the ori
 - **Author `width`/`height`/`loading`/`decoding` are kept** as written.
 - **Summary bytes** for images compare the original file with the AVIF (else WebP, else
   fallback) variant at the fallback width, roughly what a modern browser downloads at 1080px.
+
+## Cache (M4)
+
+- **Three places an asset can come from**, checked in order: the site's own
+  `_mediakiln/<hash>/` (a re-run in place), the shared `.mediakiln-cache/<key>/` (a fresh build
+  in CI), or a new encode. Both of the first two count as "cached" in the summary.
+- **Validity** is the full sha256 key plus `MEDIAKILN_CACHE_VERSION` recorded in each
+  `meta.json`; a folder whose meta doesn't match is rebuilt.
+- **Atomicity**: outputs are written to `<hash>.tmp-<pid>-<rand>` and renamed into place; failed
+  builds delete their temp folder, and stale temp folders from killed runs are removed at the
+  start of the next run. Cache entries are written the same way.
+- **Hard links** are used from the cache into the site where the filesystem allows (falling back
+  to copies). Tools that later modify `_mediakiln/` files *in place* would also change the
+  cache entry. Nothing in a normal deploy does that, but the cache can always be deleted.
+- **The cache key ignores the ffmpeg/Sharp version.** Bump `MEDIAKILN_CACHE_VERSION` when
+  output changes in a way that matters.
