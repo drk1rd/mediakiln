@@ -61,3 +61,23 @@ Notes on places where the implementation differs from, or fills gaps in, the ori
 - **E2E runs in Playwright's Chromium and WebKit** and asserts on attributes, network requests
   and hls.js taking over the element (`blob:` src), not decoded frames. Open-source Chromium
   has no H.264 decoder.
+
+## Images (M3)
+
+- **Widths follow the spec literally**: configured widths that fit, or the original width when
+  none do. A 3000px image gets 480…2400; the 3000px original is not re-encoded.
+- **Colour handling**: EXIF orientation is applied, all metadata (EXIF, XMP, ICC) is stripped and
+  pixels are converted to sRGB. Browsers treat untagged images as sRGB, so this renders the same
+  as keeping an sRGB profile while saving the few KB an embedded profile would add to every
+  variant.
+- **PNG fallbacks are palette-quantized** (`quality` maps to libimagequant), the only way a PNG
+  quality setting means anything. If a fallback at the original width is still bigger than the
+  original file, the original bytes are used.
+- **Fallback format** is PNG for PNG sources or any source with alpha, otherwise JPEG (also for
+  WebP/AVIF/TIFF sources).
+- **LCP heuristic** counts the first `<img>` in the document even if mediakiln skips it (for
+  example an external hero image), since that element is still the likely LCP.
+- **`sizes` precedence**: `data-mk-sizes` > the `<img>`'s own `sizes` > `images.sizes`.
+- **Author `width`/`height`/`loading`/`decoding` are kept** as written.
+- **Summary bytes** for images compare the original file with the AVIF (else WebP, else
+  fallback) variant at the fallback width, roughly what a modern browser downloads at 1080px.

@@ -1,13 +1,92 @@
 import { promises as fs } from "node:fs";
+import path from "node:path";
+import sharp, { type Sharp } from "sharp";
+import type {
+  ImageResult,
+  ImageSettings,
+  ImageVariant,
+  PosterResult,
+  PosterSettings,
+} from "../assets.js";
 import { encodePoster } from "./poster.js";
-import type { ImageResult, ImageSettings, PosterResult, PosterSettings } from "../assets.js";
 
+type Format = ImageVariant["format"];
+
+const EXT: Record<Format, string> = { avif: "avif", webp: "webp", jpeg: "jpg", png: "png" };
+
+/** Configured widths that fit the original; the original width alone if none do. */
+export function selectWidths(widths: readonly number[], original: number): number[] {
+  const sorted = [...new Set(widths)].sort((a, b) => a - b);
+  const fit = sorted.filter((w) => w <= original);
+  return fit.length > 0 ? fit : [original];
+}
+
+/** JPEG/PNG fallback for browsers without AVIF/WebP: PNG when the source is PNG or has alpha. */
+export function fallbackFormat(format: string | undefined, hasAlpha: boolean): "jpeg" | "png" {
+  return format === "png" || hasAlpha ? "png" : "jpeg";
+}
+
+function encode(pipeline: Sharp, format: Format, q: ImageSettings["quality"]): Sharp {
+  switch (format) {
+    case "avif":
+      return pipeline.avif({ quality: q.avif, effort: 4 });
+    case "webp":
+      return pipeline.webp({ quality: q.webp, effort: 4 });
+    case "jpeg":
+      return pipeline.jpeg({ quality: q.jpeg, mozjpeg: true });
+    case "png":
+      return pipeline.png({ quality: q.png, palette: true, compressionLevel: 9, effort: 7 });
+  }
+}
+
+/**
+ * Produce `img-<w>.<ext>` for every selected width in every configured format plus the
+ * JPEG/PNG fallback. EXIF orientation is applied; metadata is stripped and colors converted
+ * to sRGB.
+ */
 export async function processImage(
-  _input: string,
-  _outDir: string,
-  _settings: ImageSettings,
+  input: string,
+  outDir: string,
+  settings: ImageSettings,
 ): Promise<ImageResult> {
-  throw new Error("Image processing is not implemented yet");
+  const [meta, stat] = await Promise.all([sharp(input).metadata(), fs.stat(input)]);
+  if (!meta.width || !meta.height) throw new Error("Could not read image dimensions");
+  const swap = (meta.orientation ?? 1) >= 5;
+  const width = swap ? meta.height : meta.width;
+  const height = swap ? meta.width : meta.height;
+  const fallback = fallbackFormat(meta.format, Boolean(meta.hasAlpha));
+  const formats: Format[] = [...new Set<Format>([...settings.formats, fallback])];
+  const widths = selectWidths(settings.widths, width);
+  const sameFormat = meta.format === fallback;
+
+  const base = sharp(input, { failOn: "none" }).rotate();
+  const variants: ImageVariant[] = [];
+  for (const w of widths) {
+    for (const format of formats) {
+      const file = `img-${w}.${EXT[format]}`;
+      const target = path.join(outDir, file);
+      const info = await encode(
+        base.clone().resize({ width: w, withoutEnlargement: true }),
+        format,
+        settings.quality,
+      ).toFile(target);
+      let bytes = info.size;
+      // Never ship a fallback bigger than the original at the same size.
+      if (format === fallback && sameFormat && w === width && bytes > stat.size) {
+        await fs.copyFile(input, target);
+        bytes = stat.size;
+      }
+      variants.push({ path: file, format, width: w, bytes });
+    }
+  }
+  return {
+    kind: "image",
+    width,
+    height,
+    sourceBytes: stat.size,
+    fallbackFormat: fallback,
+    variants,
+  };
 }
 
 /** Optimize an author-provided video poster image into a single `poster.<ext>`. */

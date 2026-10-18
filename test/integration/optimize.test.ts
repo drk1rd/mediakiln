@@ -9,7 +9,7 @@ import { makeSite } from "../helpers/site.js";
 
 const FAST = { mp4: { preset: "ultrafast" as const } };
 
-describe("optimize() on the fixture site", () => {
+describe("optimize() on the fixture site (video)", () => {
   let site: Awaited<ReturnType<typeof makeSite>>;
   let first: Summary;
   let firstHtml: { index: string; post: string };
@@ -144,5 +144,75 @@ describe("optimize() on the fixture site", () => {
     expect(read("blog/post.html")).toBe(firstHtml.post);
     expect(readdirSync(path.join(site.dir, "_mediakiln")).sort()).toEqual(before);
     expect(manifest().assets.filter((a) => a.kind === "video")).toHaveLength(5);
+  });
+});
+
+describe("optimize() on the fixture site (images)", () => {
+  let site: Awaited<ReturnType<typeof makeSite>>;
+  let summary: Summary;
+  let html: string;
+  const read = (rel: string) => readFileSync(path.join(site.dir, rel), "utf8");
+
+  beforeAll(async () => {
+    site = await makeSite();
+    summary = await optimize({
+      dir: site.dir,
+      configFile: false,
+      cache: false,
+      video: { enabled: false },
+      logger: silentLogger,
+    });
+    html = read("index.html");
+  });
+  afterAll(() => site.cleanup());
+
+  it("processes each local raster image once", () => {
+    expect(summary.failures).toEqual([]);
+    // hero.jpg (twice in HTML, once with srcset → skipped), small.png, oriented.jpg
+    expect(summary.images.processed).toBe(3);
+    expect(summary.videos.processed).toBe(0);
+  });
+
+  it("writes every format at every width", () => {
+    const m = JSON.parse(read("_mediakiln/manifest.json")) as Manifest;
+    const hero = m.assets.find((a) => a.source === "img/hero.jpg")!;
+    expect(hero.result.kind).toBe("image");
+    if (hero.result.kind !== "image") return;
+    expect(hero.result.variants.map((v) => `${v.width}.${v.format}`).sort()).toEqual(
+      [480, 768, 1080, 1600, 2400].flatMap((w) => [`${w}.avif`, `${w}.jpeg`, `${w}.webp`]).sort(),
+    );
+    for (const v of hero.result.variants) {
+      expect(existsSync(path.join(site.dir, "_mediakiln", hero.hash, v.path))).toBe(true);
+    }
+    const small = m.assets.find((a) => a.source === "img/small.png")!;
+    expect(small.result.kind === "image" && small.result.fallbackFormat).toBe("png");
+  });
+
+  it("applies EXIF orientation", () => {
+    expect(html).toContain('alt="Oriented" srcset=');
+    expect(html).toMatch(/alt="Oriented"[^>]*width="800" height="1200"/);
+  });
+
+  it("first image is eager, later ones lazy", () => {
+    const imgs = [...html.matchAll(/<picture>.*?<img ([^>]*)><\/picture>/g)]
+      .map((m) => m[1]!)
+      .filter((attrs) => attrs.includes("/_mediakiln/"));
+    expect(imgs).toHaveLength(3);
+    expect(imgs[0]).not.toContain("loading=");
+    expect(imgs[1]).toContain('loading="lazy"');
+    expect(imgs[2]).toContain('loading="lazy"');
+  });
+
+  it("shrinks image bytes substantially", () => {
+    expect(summary.images.bytesAfter).toBeLessThan(summary.images.bytesBefore / 5);
+  });
+
+  it("leaves unprocessable images untouched and needs no runtime", () => {
+    expect(html).toContain(
+      '<img src="/img/hero.jpg" alt="Already responsive" srcset="/img/hero.jpg 3000w">',
+    );
+    expect(html).toContain('<picture><img src="/img/small.png" alt="In picture"></picture>');
+    expect(html).toContain('<img src="/img/missing.jpg" alt="Missing">');
+    expect(html).not.toContain("loader.js");
   });
 });

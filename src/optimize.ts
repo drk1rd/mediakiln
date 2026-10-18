@@ -27,7 +27,7 @@ import { processImage, processPoster } from "./images/process.js";
 import { writeManifest, type ManifestEntry } from "./manifest.js";
 import { publicUrl } from "./resolve.js";
 import { injectRuntime } from "./rewrite/inject.js";
-import { rewriteImage } from "./rewrite/image.js";
+import { pickFallbackWidth, rewriteImage } from "./rewrite/image.js";
 import { rewriteVideo } from "./rewrite/video.js";
 import { copyRuntime } from "./runtimeAssets.js";
 import { findPages, runtimeScriptPath, scanPage, type PageScan } from "./scan.js";
@@ -306,13 +306,6 @@ export function deliveredBytes(result: AssetResult): { before: number; after: nu
       return { before: result.sourceBytes, after: preferred?.bytes ?? result.sourceBytes };
     }
   }
-}
-
-/** The width closest to 1080 from below, or the smallest one when all are wider. */
-export function pickFallbackWidth(widths: number[]): number {
-  const sorted = [...new Set(widths)].sort((a, b) => a - b);
-  const below = sorted.filter((w) => w <= 1080);
-  return below.length > 0 ? below[below.length - 1]! : sorted[0]!;
 }
 
 async function cleanStaleTemps(outRoot: string): Promise<void> {
