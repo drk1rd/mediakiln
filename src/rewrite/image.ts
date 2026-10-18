@@ -2,6 +2,9 @@ import type { ImageResult, ImageVariant } from "../assets.js";
 import type { ResolvedConfig } from "../config.js";
 import { attr, getAttr, hasAttr, rebuildStartTag, type Edit } from "../html.js";
 import type { ImageRef } from "../scan.js";
+import { pickFallbackWidth } from "../images/process.js";
+
+export { pickFallbackWidth };
 
 export interface ImageOutputs {
   result: ImageResult;
@@ -16,13 +19,6 @@ const MIME: Record<ImageVariant["format"], string> = {
   png: "image/png",
 };
 
-/** The width closest to 1080 from below, or the smallest one when all are wider. */
-export function pickFallbackWidth(widths: number[]): number {
-  const sorted = [...new Set(widths)].sort((a, b) => a - b);
-  const below = sorted.filter((w) => w <= 1080);
-  return below.length > 0 ? below[below.length - 1]! : sorted[0]!;
-}
-
 /** Turn `<img>` into `<picture>` with AVIF/WebP `<source>`s and a responsive fallback `<img>`. */
 export function rewriteImage(
   html: string,
@@ -32,6 +28,25 @@ export function rewriteImage(
 ): Edit[] {
   const { el } = ref;
   const { result, baseUrl } = out;
+  const lazy = config.images.lazy && !ref.eager && !ref.first;
+  const extras = (): Array<[string, string | true]> => {
+    const extra: Array<[string, string | true]> = [];
+    if (!hasAttr(el, "width") && !hasAttr(el, "height")) {
+      extra.push(["width", String(result.width)], ["height", String(result.height)]);
+    }
+    if (lazy && !hasAttr(el, "loading")) extra.push(["loading", "lazy"]);
+    if (!hasAttr(el, "decoding")) extra.push(["decoding", "async"]);
+    return extra;
+  };
+  const loc = el.sourceCodeLocation!.startTag!;
+
+  if (result.passthrough || result.variants.length === 0) {
+    const set = extras();
+    if (set.length === 0 && !hasAttr(el, "data-mk-eager") && !hasAttr(el, "data-mk-sizes"))
+      return [];
+    const img = rebuildStartTag(html, el, { remove: ["data-mk-eager", "data-mk-sizes"], set });
+    return [{ start: loc.startOffset, end: loc.endOffset, text: img }];
+  }
   const srcset = (format: ImageVariant["format"]) =>
     result.variants
       .filter((v) => v.format === format)
@@ -49,13 +64,8 @@ export function rewriteImage(
     ["src", baseUrl + fallback.path],
     ["srcset", srcset(result.fallbackFormat)],
     ["sizes", sizes],
+    ...extras(),
   ];
-  if (!hasAttr(el, "width") && !hasAttr(el, "height")) {
-    set.push(["width", String(result.width)], ["height", String(result.height)]);
-  }
-  const lazy = config.images.lazy && !ref.eager && !ref.first;
-  if (lazy && !hasAttr(el, "loading")) set.push(["loading", "lazy"]);
-  if (!hasAttr(el, "decoding")) set.push(["decoding", "async"]);
 
   const img = rebuildStartTag(html, el, { remove: ["data-mk-eager", "data-mk-sizes"], set });
   const sources = [...new Set(result.variants.map((v) => v.format))]
@@ -65,7 +75,6 @@ export function rewriteImage(
         `<source ${attr("type", MIME[f])} ${attr("srcset", srcset(f))} ${attr("sizes", sizes)}>`,
     );
 
-  const loc = el.sourceCodeLocation!.startTag!;
   return [
     {
       start: loc.startOffset,

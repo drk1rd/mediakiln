@@ -4,7 +4,7 @@ import type { ResolvedConfig, VideoConfig, ImagesConfig } from "./config.js";
  * Bump whenever output layout or encoding logic changes, so stale cache entries
  * (and stale `_mediakiln/<hash>/` folders) are never reused.
  */
-export const MEDIAKILN_CACHE_VERSION = "1";
+export const MEDIAKILN_CACHE_VERSION = "2";
 
 export const VIDEO_EXTENSIONS = new Set([".mp4", ".mov", ".m4v", ".webm", ".mkv"]);
 export const RASTER_EXTENSIONS = new Set([
@@ -77,6 +77,11 @@ export interface ImageResult {
   sourceBytes: number;
   fallbackFormat: "jpeg" | "png";
   variants: ImageVariant[];
+  /**
+   * True when re-encoding didn't pay off (even the resized fallback was bigger than the
+   * original). The `<img>` keeps its source and only gains dimensions and lazy loading.
+   */
+  passthrough?: boolean;
 }
 
 export interface PosterResult {

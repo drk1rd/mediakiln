@@ -176,3 +176,78 @@ describe("image rewrite", () => {
     expect(out).not.toContain("image/png");
   });
 });
+
+describe("never make an image worse", () => {
+  const variant = (format: "avif" | "webp" | "png", width: number, bytes: number) => ({
+    format,
+    width,
+    bytes,
+    path: `img-${width}.${format}`,
+  });
+
+  it("drops modern formats that lose to the fallback", async () => {
+    const { pruneVariants } = await import("../../src/images/process.js");
+    const dir = await mkdtemp(path.join(os.tmpdir(), "mk-prune-"));
+    const pruned = await pruneVariants(
+      {
+        kind: "image",
+        width: 1200,
+        height: 800,
+        sourceBytes: 100_000,
+        fallbackFormat: "png",
+        variants: [
+          variant("avif", 480, 10),
+          variant("webp", 480, 90),
+          variant("png", 480, 50),
+          variant("avif", 1080, 100),
+          variant("webp", 1080, 900),
+          variant("png", 1080, 500),
+        ],
+      },
+      dir,
+    );
+    expect(pruned.passthrough).toBeUndefined();
+    expect([...new Set(pruned.variants.map((v) => v.format))]).toEqual(["avif", "png"]);
+  });
+
+  it("passes the image through when even the fallback grows", async () => {
+    const { pruneVariants } = await import("../../src/images/process.js");
+    const dir = await mkdtemp(path.join(os.tmpdir(), "mk-prune-"));
+    const pruned = await pruneVariants(
+      {
+        kind: "image",
+        width: 1200,
+        height: 800,
+        sourceBytes: 1000,
+        fallbackFormat: "png",
+        variants: [variant("avif", 1080, 900), variant("png", 1080, 5000)],
+      },
+      dir,
+    );
+    expect(pruned).toMatchObject({ passthrough: true, variants: [] });
+  });
+
+  it("a passthrough image only gains dimensions, lazy loading and decoding", async () => {
+    const html = `<img src="/img/a.jpg"><img src="/img/b.png" alt="p" data-mk-sizes="10vw">`;
+    const { page } = await rewrite(html);
+    const cfg = resolveConfig({});
+    const passthrough: ImageResult = {
+      ...result,
+      width: 1200,
+      height: 800,
+      variants: [],
+      passthrough: true,
+    };
+    const out = applyEdits(
+      html,
+      rewriteImage(html, page.images[1]!, { result: passthrough, baseUrl: "/x/" }, cfg),
+    );
+    expect(out).toBe(
+      `<img src="/img/a.jpg"><img src="/img/b.png" alt="p" width="1200" height="800" loading="lazy" decoding="async">`,
+    );
+    // and re-running changes nothing
+    const again = await rewrite(out);
+    const second = again.page.images[1]!;
+    expect(rewriteImage(out, second, { result: passthrough, baseUrl: "/x/" }, cfg)).toEqual([]);
+  });
+});

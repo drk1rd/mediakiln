@@ -24,6 +24,8 @@ export interface Manifest {
 /**
  * Write `<dir>/<outDirName>/manifest.json`. Entries from earlier runs that this run didn't
  * touch are kept (keyed by hash), so re-running on an already-processed site doesn't lose them.
+ * When nothing but timestamps and cache hits changed, the file is left alone so re-runs are
+ * byte-for-byte idempotent.
  */
 export async function writeManifest(
   file: string,
@@ -31,13 +33,18 @@ export async function writeManifest(
   outDir: string,
 ): Promise<Manifest> {
   const byHash = new Map<string, ManifestEntry>();
+  let previous: Manifest | undefined;
   try {
-    const previous = JSON.parse(await fs.readFile(file, "utf8")) as Manifest;
+    previous = JSON.parse(await fs.readFile(file, "utf8")) as Manifest;
     for (const e of previous.assets ?? []) byHash.set(e.hash, e);
   } catch {
     // no previous manifest
   }
-  for (const e of entries) byHash.set(e.hash, e);
+  for (const e of entries) {
+    const old = byHash.get(e.hash);
+    // A cache hit for an asset the manifest already describes is not news.
+    byHash.set(e.hash, old && e.cached ? { ...e, cached: old.cached } : e);
+  }
   const manifest: Manifest = {
     version: VERSION,
     generatedAt: new Date().toISOString(),
@@ -46,6 +53,14 @@ export async function writeManifest(
       (a, b) => a.source.localeCompare(b.source) || a.hash.localeCompare(b.hash),
     ),
   };
+  if (
+    previous &&
+    previous.version === manifest.version &&
+    previous.outDir === manifest.outDir &&
+    JSON.stringify(previous.assets) === JSON.stringify(manifest.assets)
+  ) {
+    return previous;
+  }
   await fs.mkdir(path.dirname(file), { recursive: true });
   await fs.writeFile(file, JSON.stringify(manifest, null, 2) + "\n");
   return manifest;

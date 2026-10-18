@@ -1,0 +1,97 @@
+name: mediakiln
+description: Optimize video and images in a built static site (faststart MP4, HLS, AVIF/WebP)
+author: drk1rd
+branding:
+  icon: film
+  color: orange
+inputs:
+  dir:
+    description: Built site directory (e.g. ./dist, ./_site, ./public)
+    required: true
+  args:
+    description: Extra CLI args, e.g. "--base /blog/ --no-hls"
+    required: false
+    default: ""
+  cache:
+    description: Cache processed media between runs with actions/cache
+    required: false
+    default: "true"
+  node-version:
+    description: Node.js version used to run mediakiln
+    required: false
+    default: "22"
+outputs:
+  summary:
+    description: JSON summary of the run (counts, bytes before/after, failures)
+    value: ${{ steps.run.outputs.summary }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Ensure ffmpeg
+      shell: bash
+      run: |
+        if ! command -v ffmpeg >/dev/null; then
+          if command -v apt-get >/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          elif command -v brew >/dev/null; then
+            brew install ffmpeg
+          else
+            echo "::error::ffmpeg not found; install it before running mediakiln"
+            exit 1
+          fi
+        fi
+        ffmpeg -hide_banner -version | head -1
+
+    - name: Restore cache
+      if: inputs.cache == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/.mediakiln-cache
+        key: mediakiln-${{ runner.os }}-${{ hashFiles(format('{0}/**/*.mp4', inputs.dir), format('{0}/**/*.mov', inputs.dir), format('{0}/**/*.m4v', inputs.dir), format('{0}/**/*.webm', inputs.dir), format('{0}/**/*.mkv', inputs.dir), format('{0}/**/*.jpg', inputs.dir), format('{0}/**/*.jpeg', inputs.dir), format('{0}/**/*.png', inputs.dir), format('{0}/**/*.webp', inputs.dir), format('{0}/**/*.avif', inputs.dir), format('{0}/**/*.tif*', inputs.dir)) }}
+        restore-keys: mediakiln-${{ runner.os }}-
+
+    - name: Install mediakiln
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      # --ignore-scripts skips the optional ffmpeg-static download (the system ffmpeg is used)
+      run: npm ci --ignore-scripts --no-audit --no-fund && npm run build --silent
+
+    - name: Run mediakiln
+      id: run
+      shell: bash
+      env:
+        MK_DIR: ${{ inputs.dir }}
+        MK_ARGS: ${{ inputs.args }}
+        MK_CACHE_DIR: ${{ github.workspace }}/.mediakiln-cache
+        MK_CLI: ${{ github.action_path }}/dist/cli.js
+      run: |
+        set -o pipefail
+        cache_flags=(--cache-dir "$MK_CACHE_DIR")
+        # shellcheck disable=SC2086 # MK_ARGS is intentionally word-split
+        node "$MK_CLI" "$MK_DIR" "${cache_flags[@]}" $MK_ARGS --json > "$RUNNER_TEMP/mediakiln.json" || status=$?
+        status=${status:-0}
+        {
+          echo "summary<<MEDIAKILN_EOF"
+          cat "$RUNNER_TEMP/mediakiln.json"
+          echo "MEDIAKILN_EOF"
+        } >> "$GITHUB_OUTPUT"
+        node -e '
+          const s = require(process.argv[1]);
+          const mb = (b) => (b / 1048576).toFixed(1) + " MB";
+          const lines = [
+            "### mediakiln",
+            "| | processed | cached | failed | before | after |",
+            "|---|---|---|---|---|---|",
+            `| videos | ${s.videos.processed} | ${s.videos.cached} | ${s.videos.failed} | ${mb(s.videos.bytesBefore)} | ${mb(s.videos.bytesAfter)} |`,
+            `| images | ${s.images.processed} | ${s.images.cached} | ${s.images.failed} | ${mb(s.images.bytesBefore)} | ${mb(s.images.bytesAfter)} |`,
+            "",
+            `${s.pages.rewritten} pages rewritten in ${(s.durationMs / 1000).toFixed(1)}s`,
+            ...s.failures.map((f) => `- ✗ ${f.kind} \`${f.file}\`: ${f.error.split("\n")[0]}`),
+          ];
+          require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
+        ' "$RUNNER_TEMP/mediakiln.json" || true
+        exit "$status"

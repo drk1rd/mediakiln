@@ -130,6 +130,7 @@ describe("optimize() on the fixture site (video)", () => {
 
   it("is idempotent: a second run changes nothing", async () => {
     const before = readdirSync(path.join(site.dir, "_mediakiln")).sort();
+    const manifestBefore = read("_mediakiln/manifest.json");
     const second = await optimize({
       dir: site.dir,
       configFile: false,
@@ -144,6 +145,7 @@ describe("optimize() on the fixture site (video)", () => {
     expect(read("blog/post.html")).toBe(firstHtml.post);
     expect(readdirSync(path.join(site.dir, "_mediakiln")).sort()).toEqual(before);
     expect(manifest().assets.filter((a) => a.kind === "video")).toHaveLength(5);
+    expect(read("_mediakiln/manifest.json")).toBe(manifestBefore);
   });
 });
 

@@ -21,6 +21,13 @@ export function selectWidths(widths: readonly number[], original: number): numbe
   return fit.length > 0 ? fit : [original];
 }
 
+/** The width closest to 1080 from below, or the smallest one when all are wider. */
+export function pickFallbackWidth(widths: number[]): number {
+  const sorted = [...new Set(widths)].sort((a, b) => a - b);
+  const below = sorted.filter((w) => w <= 1080);
+  return below.length > 0 ? below[below.length - 1]! : sorted[0]!;
+}
+
 /** JPEG/PNG fallback for browsers without AVIF/WebP: PNG when the source is PNG or has alpha. */
 export function fallbackFormat(format: string | undefined, hasAlpha: boolean): "jpeg" | "png" {
   return format === "png" || hasAlpha ? "png" : "jpeg";
@@ -79,14 +86,38 @@ export async function processImage(
       variants.push({ path: file, format, width: w, bytes });
     }
   }
-  return {
-    kind: "image",
-    width,
-    height,
-    sourceBytes: stat.size,
-    fallbackFormat: fallback,
-    variants,
-  };
+  return pruneVariants(
+    { kind: "image", width, height, sourceBytes: stat.size, fallbackFormat: fallback, variants },
+    outDir,
+  );
+}
+
+/**
+ * Never make an image worse. Compared at the fallback width:
+ * - a modern format that is bigger than the JPEG/PNG fallback is dropped entirely;
+ * - if even the fallback is bigger than the whole original file (typical for pixel art and
+ *   other images that grow when resampled), the image passes through unchanged.
+ */
+export async function pruneVariants(result: ImageResult, outDir: string): Promise<ImageResult> {
+  const fbWidth = pickFallbackWidth(result.variants.map((v) => v.width));
+  const at = (format: Format) =>
+    result.variants.find((v) => v.format === format && v.width === fbWidth);
+  const fallback = at(result.fallbackFormat)!;
+  const remove = (vs: ImageVariant[]) =>
+    Promise.all(vs.map((v) => fs.rm(path.join(outDir, v.path), { force: true })));
+
+  if (fallback.bytes > result.sourceBytes) {
+    await remove(result.variants);
+    return { ...result, variants: [], passthrough: true };
+  }
+  const losing = new Set(
+    result.variants
+      .map((v) => v.format)
+      .filter((f) => f !== result.fallbackFormat && (at(f)?.bytes ?? 0) > fallback.bytes),
+  );
+  if (losing.size === 0) return result;
+  await remove(result.variants.filter((v) => losing.has(v.format)));
+  return { ...result, variants: result.variants.filter((v) => !losing.has(v.format)) };
 }
 
 /** Optimize an author-provided video poster image into a single `poster.<ext>`. */

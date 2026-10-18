@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # The CLI itself supports Node 20+. The dev toolchain (vitest) needs 22, so check 20 with a
+  # real run of the built CLI instead.
+  node20-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - run: npm ci --ignore-scripts --engine-strict=false
+      - run: npm run build
+      - run: bash examples/plain-html/build.sh
+      - run: node dist/cli.js examples/plain-html/_site
+      - name: Second run is fully cached and idempotent
+        run: |
+          cp -r examples/plain-html/_site /tmp/before
+          node dist/cli.js examples/plain-html/_site --json > /tmp/second.json
+          node -e 'const s=require("/tmp/second.json"); if (s.videos.processed || s.images.processed || s.pages.rewritten) { console.error(s); process.exit(1) }'
+          diff -r /tmp/before examples/plain-html/_site
+
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - run: bash examples/plain-html/build.sh
+      - name: Run the action from this checkout
+        id: mk
+        uses: ./
+        with:
+          dir: examples/plain-html/_site
+      - name: Check output
+        env:
+          SUMMARY: ${{ steps.mk.outputs.summary }}
+        run: |
+          echo "$SUMMARY" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const s=JSON.parse(d); if (!s.videos.processed || !s.images.processed) process.exit(1)})'
+          grep -q 'data-mk-hls=' examples/plain-html/_site/index.html
+          test -f examples/plain-html/_site/_mediakiln/runtime/loader.js
