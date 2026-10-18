@@ -25,4 +25,19 @@ ff -f lavfi -i "mandelbrot=size=1280x720:rate=30" -t 4 \
 ff -f lavfi -i "gradients=size=2400x1350:nb_colors=5:seed=7:duration=1" -frames:v 1 -q:v 1 _site/img/hero.jpg
 ff -f lavfi -i "cellauto=size=1200x800:rule=110:rate=1" -frames:v 1 _site/img/pattern.png
 
+# A small animated GIF (becomes a looping video) and captions for the intro video.
+ff -f lavfi -i "mandelbrot=size=480x270:rate=15" -t 4 _site/img/zoom.gif
+cat > _site/media/intro.en.vtt <<'VTT'
+WEBVTT
+
+00:00:01.000 --> 00:00:05.000
+Captions from a plain <track>, now inside the HLS stream.
+
+00:00:06.000 --> 00:00:12.000
+Every variant references the same subtitle playlist.
+
+00:00:13.000 --> 00:00:19.000
+On the MP4 fallback the original track keeps working.
+VTT
+
 echo "built $(pwd)/_site"

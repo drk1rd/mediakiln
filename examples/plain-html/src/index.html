@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>mediakiln — plain HTML example</title>
+    <meta property="og:title" content="mediakiln demo" />
+    <meta property="og:image" content="img/hero.jpg" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -13,7 +15,7 @@
         <h1>mediakiln</h1>
         <p>
           This page shipped with a 1080p MP4 that couldn't start until fully downloaded, a 2400px
-          JPEG and a PNG. One build step later, they are below.
+          JPEG, a PNG, a GIF and a CSS background. One build step later, they are below.
         </p>
       </div>
     </header>
@@ -22,10 +24,13 @@
       <section>
         <h2>Adaptive video</h2>
         <p>
-          Faststart MP4 plus a three-rung HLS ladder. Safari plays HLS natively, other browsers get
-          a self-hosted hls.js, and everything else falls back to the MP4.
+          Faststart MP4 plus an HLS ladder in H.264 and HEVC, with per-title bitrates and a short
+          first segment. The captions travel inside the stream; the scrub thumbnails are a sprite
+          sheet with a WebVTT track (<code>data-mk-thumbnails</code>).
         </p>
-        <video controls src="media/intro.mp4"></video>
+        <video controls src="media/intro.mp4">
+          <track kind="captions" src="media/intro.en.vtt" srclang="en" label="English" default />
+        </video>
       </section>
 
       <section>
@@ -33,6 +38,16 @@
         <p>AVIF and WebP at several widths, with intrinsic dimensions and lazy loading.</p>
         <img src="img/hero.jpg" alt="A soft multicolour gradient" />
         <img src="img/pattern.png" alt="A rule 110 cellular automaton pattern" />
+      </section>
+
+      <section>
+        <h2>GIFs and CSS backgrounds</h2>
+        <p>
+          The animated GIF is now a muted looping video; the CSS background is an
+          <code>image-set()</code> with AVIF and WebP.
+        </p>
+        <img src="img/zoom.gif" alt="A Mandelbrot zoom" />
+        <div class="card-bg" role="img" aria-label="Gradient background"></div>
       </section>
 
       <section>
@@ -45,7 +60,7 @@
     <footer>
       <p>
         Optimized by <a href="https://github.com/drk1rd/mediakiln">mediakiln</a>. View source to see
-        the rewritten markup.
+        the rewritten markup, or read the <a href="_mediakiln/report.html">build report</a>.
       </p>
     </footer>
   </body>

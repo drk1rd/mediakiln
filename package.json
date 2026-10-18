@@ -1,6 +1,6 @@
 {
   "name": "mediakiln",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Bake the media in a static site so it's ready to stream: faststart MP4, HLS, posters, AVIF/WebP, srcset.",
   "license": "MIT",
   "author": "Suryansh Prajapati",
@@ -30,6 +30,10 @@
     "./eleventy": {
       "types": "./dist/plugins/eleventy.d.ts",
       "default": "./dist/plugins/eleventy.js"
+    },
+    "./docusaurus": {
+      "types": "./dist/plugins/docusaurus.d.ts",
+      "default": "./dist/plugins/docusaurus.js"
     },
     "./package.json": "./package.json"
   },
@@ -65,6 +69,7 @@
     "p-limit": "^7.3.3",
     "parse5": "^8.0.1",
     "picomatch": "^4.0.7",
+    "postcss": "^8.5.30",
     "sharp": "^0.35.5",
     "tinyglobby": "^0.2.17",
     "zod": "^4.6.7"

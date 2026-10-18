@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { cac } from "cac";
-import { optimize, formatSummary, type OptimizeOptions } from "./index.js";
+import { optimize, watch, formatSummary, type OptimizeOptions } from "./index.js";
 import { flagsToOverrides, type CliFlags } from "./cliFlags.js";
 import { createLogger } from "./util/logger.js";
 import { VERSION } from "./version.js";
@@ -17,6 +17,9 @@ async function main(argv: string[]): Promise<number> {
     .option("--no-images", "Skip image processing")
     .option("--no-hls", "Never generate HLS (faststart MP4 only)")
     .option("--concurrency <n>", "Parallel image jobs (default: CPU count)")
+    .option("--site <url>", "Public origin, e.g. https://example.com (absolute og:image URLs)")
+    .option("--report", "Write <outDirName>/report.html")
+    .option("-w, --watch", "Keep running and re-optimize when files in <dir> change")
     .option("--dry-run", "Report what would change, write nothing")
     .option("--verbose", "Detailed logs (ffmpeg commands, timings)")
     .option("--json", "Machine-readable summary to stdout")
@@ -45,6 +48,33 @@ async function main(argv: string[]): Promise<number> {
     dryRun: Boolean(flags.dryRun),
     logger,
   };
+
+  if (flags.watch) {
+    if (flags.dryRun) {
+      logger.error("--watch and --dry-run can't be combined");
+      return 1;
+    }
+    const w = watch({
+      ...options,
+      onRun: (summary) => {
+        if (flags.json) process.stdout.write(JSON.stringify(summary) + "\n");
+        else if (
+          summary.pages.rewritten + summary.stylesheets.rewritten > 0 ||
+          summary.failures.length > 0
+        ) {
+          process.stderr.write(formatSummary(summary) + "\n");
+        }
+      },
+      onError: (err) => logger.error(err instanceof Error ? err.message : String(err)),
+    });
+    logger.info(`watching ${dir} (Ctrl+C to stop)`);
+    await new Promise<void>((resolve) => {
+      const stop = () => void w.close().then(resolve);
+      process.once("SIGINT", stop);
+      process.once("SIGTERM", stop);
+    });
+    return 0;
+  }
 
   try {
     const summary = await optimize(options);

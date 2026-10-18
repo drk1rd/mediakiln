@@ -1,8 +1,9 @@
 # Benchmarks
 
-Numbers from one run of [`scripts/bench.mts`](../scripts/bench.mts) on 2026-10-18 (Apple M5 Pro,
-15 cores, ffmpeg 9.0.2, Sharp 0.35.5, Playwright 1.64.1, default mediakiln config).
-Reproduce with:
+Numbers from one run of [`scripts/bench.mts`](../scripts/bench.mts) with mediakiln 1.1 on
+2026-10-18 (Apple M5 Pro, 15 cores, ffmpeg 9.0.2, Sharp 0.35.5, Playwright 1.64.1, default
+mediakiln config: fMP4 HLS with a 1-second first segment, H.264 only). Earlier 1.0 numbers are
+shown where they changed. Reproduce with:
 
 ```bash
 npx playwright install chromium webkit
@@ -23,34 +24,37 @@ anyone can reproduce it:
 > The media is synthetic (ffmpeg test patterns with grain, generated gradients with noise).
 > The video numbers are representative; the photos compress far better than real photos
 > would, so treat the image savings as an upper bound. Run mediakiln on your own site with
-> `--json` to get real numbers.
+> `--report` or `--json` to get real numbers.
 
 ## File sizes
 
-| Asset               | Raw                | mediakiln                                                    |
-| ------------------- | ------------------ | ------------------------------------------------------------ |
-| 30 s 1080p video    | 60.6 MB, moov last | 39.0 MB faststart MP4 + 34.3 MB HLS ladder (360p/720p/1080p) |
-| 6 s background loop | 4.7 MB, moov last  | 4.0 MB faststart MP4 (MP4-only: below the HLS thresholds)    |
-| Photos (×3)         | 4.2 MB each        | ~5 KB each delivered at 1080px (AVIF; 5 widths × 3 formats)  |
-| PNG screenshot      | 17.8 KB            | 5.6 KB (AVIF at 1080px)                                      |
+| Asset               | Raw                | mediakiln                                                   |
+| ------------------- | ------------------ | ----------------------------------------------------------- |
+| 30 s 1080p video    | 60.6 MB, moov last | 39.7 MB faststart MP4 + 33.2 MB fMP4 HLS (360p/720p/1080p)  |
+| 6 s background loop | 4.7 MB, moov last  | 4.0 MB faststart MP4 (MP4-only: below the HLS thresholds)   |
+| Photos (×3)         | 4.2 MB each        | ~5 KB each delivered at 1080px (AVIF; 5 widths × 3 formats) |
+| PNG screenshot      | 17.8 KB            | 5.6 KB (AVIF at 1080px)                                     |
 
 "Delivered" is what a modern browser downloads at a ~1080px layout width. The HLS ladder is
 streamed: a visitor only fetches the segments they watch, at the rendition their connection
-allows.
+allows. With `video.hls.codecs: ["h264", "hevc"]`, HEVC renditions add ~65% of the H.264
+ladder's size and save about a third of the bandwidth for browsers that can decode them.
 
 ## Page load (Lighthouse 13.5, mobile preset, simulated throttling)
 
-| Metric                   | Raw     | mediakiln |
-| ------------------------ | ------- | --------- |
-| Performance score        | 69      | **100**   |
-| Largest Contentful Paint | 62.5 s  | **1.7 s** |
-| Cumulative Layout Shift  | 0.145   | **0**     |
-| Total Blocking Time      | 30 ms   | 0 ms      |
-| Total byte weight        | 18.0 MB | 9.6 MB    |
+| Metric                   | Raw     | mediakiln  |
+| ------------------------ | ------- | ---------- |
+| Performance score        | 72      | **100**    |
+| Largest Contentful Paint | 62.5 s  | **1.65 s** |
+| Cumulative Layout Shift  | 0.114   | **0**      |
+| Total Blocking Time      | 3 ms    | 0 ms       |
+| Total byte weight        | 18.7 MB | 11.7 MB    |
 
 LCP drops because the hero photo is no longer a 4 MB JPEG; CLS drops because every image and
 video now has intrinsic dimensions; byte weight drops because below-the-fold images are lazy
-and much smaller. The remaining weight is mostly the autoplaying background loop.
+and much smaller. The remaining weight is mostly the autoplaying background loop and the
+first HLS segments of the main video, which is near the top of the page. (1.0 measured
+9.6 MB here: with the short first segment, 1.1 starts fetching video sooner.)
 
 ## Video playback
 
@@ -59,21 +63,22 @@ Bandwidth is limited per response by the benchmark's static server. Average of 2
 
 **Broadband: 20 Mbps, 40 ms latency**
 
-| Browser  | Time to first frame (raw → mediakiln) | Video played in 10 s | Stalls |
-| -------- | ------------------------------------- | -------------------- | ------ |
-| WebKit   | 424 ms → **267 ms**                   | 9.1 s → 9.6 s        | none   |
-| Chromium | 330 ms → **272 ms**                   | 9.4 s → 8.9 s        | none   |
+| Browser  | Time to first frame: raw → 1.1 (1.0) | Video played in 10 s | Stalls |
+| -------- | ------------------------------------ | -------------------- | ------ |
+| WebKit   | 384 ms → **240 ms** (267 ms)         | 9.0 s → 9.6 s        | none   |
+| Chromium | 336 ms → **133 ms** (272 ms)         | 9.4 s → 9.1 s        | none   |
 
 **Mobile: 6 Mbps, 80 ms latency**
 
-| Browser  | Time to first frame (raw → mediakiln) | Video played in 10 s     | Stalls           |
-| -------- | ------------------------------------- | ------------------------ | ---------------- |
-| WebKit   | 1074 ms → **479 ms**                  | 0 s → **9.1 s** (720p)   | stuck → none     |
-| Chromium | 1365 ms → **807 ms**                  | 3.1 s → **8.4 s** (360p) | 5.2 s → **none** |
+| Browser  | Time to first frame: raw → 1.1 (1.0) | Video played in 10 s     | Stalls           |
+| -------- | ------------------------------------ | ------------------------ | ---------------- |
+| WebKit   | 991 ms → **485 ms** (479 ms)         | 0 s → **8.9 s** (360p)   | stuck → none     |
+| Chromium | 1426 ms → **346 ms** (807 ms)        | 3.2 s → **8.9 s** (360p) | 4.9 s → **none** |
 
 On a connection slower than the video's bitrate, the raw 16 Mbps file can't keep up: WebKit
 never got past the first frame within 10 s and Chromium spent half the time buffering. The HLS
-version drops to a rendition the connection can sustain and plays straight through.
+version drops to a rendition the connection can sustain and plays straight through. The
+1-second first segment in 1.1 roughly halves Chromium's start time.
 
 ### Where the raw file wins
 
@@ -83,10 +88,10 @@ first bytes are already buffered. The optimized video is lazy (`preload="none"` 
 viewport) and HLS needs a master playlist, a variant playlist and a segment before the first
 frame:
 
-| Browser  | Raw (preloaded) | mediakiln (lazy HLS) |
-| -------- | --------------- | -------------------- |
-| WebKit   | 80 ms           | 266 ms               |
-| Chromium | 63 ms           | 695 ms               |
+| Browser  | Raw (preloaded) | mediakiln 1.1 (1.0) |
+| -------- | --------------- | ------------------- |
+| WebKit   | 96 ms           | 170 ms (266 ms)     |
+| Chromium | 63 ms           | 722 ms (695 ms)     |
 
 That's the trade-off mediakiln makes by default: no bytes for videos the visitor never plays,
 and smooth adaptive playback on slow connections, at the cost of a few hundred milliseconds
@@ -98,8 +103,21 @@ faststart MP4.
 
 | Run                                    | Time   |
 | -------------------------------------- | ------ |
-| First run (2 videos, 4 images, 1 page) | 11.6 s |
-| Second run, fresh copy, warm cache     | 59 ms  |
+| First run (2 videos, 4 images, 1 page) | 12.1 s |
+| Second run, fresh copy, warm cache     | 65 ms  |
 
 The second run copies (hard-links) the cached outputs and rewrites the HTML, with zero
-encodes. This is what CI sees on every deploy after the first.
+encodes. This is what CI sees on every deploy after the first. With `remoteCache`, the same
+holds for a fresh machine: entries are downloaded instead of encoded.
+
+**Hardware encoding is not automatically faster.** On this machine, encoding the 15 s 1080p
+test clip (MP4 + 3-rung HLS) took:
+
+| Codecs       | Software (x264/x265) | VideoToolbox |
+| ------------ | -------------------- | ------------ |
+| H.264        | 3.1 s                | 4.9 s        |
+| H.264 + HEVC | 7.5 s                | 8.2 s        |
+
+A fast CPU running x264 beats the media engine juggling several streams at once. Hardware
+encoders pay off on weaker CPUs (CI runners, laptops) and with NVENC on long or 4K footage;
+measure on your own hardware before switching `video.encoder`.

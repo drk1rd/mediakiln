@@ -61,8 +61,9 @@ describe("vite plugin", () => {
     expect(html).toMatch(/<source src="\/app\/_mediakiln\/[0-9a-f]{12}\/video\.mp4"/);
     // Vite emitted the image as a hashed asset; mediakiln still found and optimized it.
     expect(html).toMatch(/<picture><source type="image\/avif" srcset="\/app\/_mediakiln\//);
-    expect(html).toContain('src="/app/_mediakiln/runtime/loader.js"');
-    expect(existsSync(path.join(project, "dist/_mediakiln/runtime/loader.js"))).toBe(true);
+    const loader = /src="\/app\/(_mediakiln\/runtime\/loader\.[0-9a-f]{8}\.js)"/.exec(html)?.[1];
+    expect(loader).toBeDefined();
+    expect(existsSync(path.join(project, "dist", loader!))).toBe(true);
   });
 
   it("does nothing in dev (apply: build)", () => {

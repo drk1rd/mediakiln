@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import sharp from "sharp";
+import sharp from "../images/sharp.js";
 import type { GifResult, GifSettings } from "../assets.js";
 import { encodePoster } from "../images/poster.js";
 import type { VideoContext } from "./video.js";

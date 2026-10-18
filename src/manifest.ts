@@ -6,7 +6,7 @@ import { VERSION } from "./version.js";
 export interface ManifestEntry {
   /** Source file relative to the site dir. */
   source: string;
-  kind: AssetJob["kind"];
+  kind: AssetJob["kind"] | "captions";
   hash: string;
   cached: boolean;
   bytesBefore: number;

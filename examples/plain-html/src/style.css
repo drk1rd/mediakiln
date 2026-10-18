@@ -80,3 +80,9 @@ footer {
 a {
   color: var(--accent);
 }
+.card-bg {
+  height: 220px;
+  border-radius: 8px;
+  margin: 1rem 0;
+  background: url(img/hero.jpg) center / cover;
+}

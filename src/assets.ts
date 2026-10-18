@@ -4,7 +4,7 @@ import type { ResolvedConfig, VideoConfig, ImagesConfig } from "./config.js";
  * Bump whenever output layout or encoding logic changes, so stale cache entries
  * (and stale `_mediakiln/<hash>/` folders) are never reused.
  */
-export const MEDIAKILN_CACHE_VERSION = "2";
+export const MEDIAKILN_CACHE_VERSION = "3";
 
 export const VIDEO_EXTENSIONS = new Set([".mp4", ".mov", ".m4v", ".webm", ".mkv"]);
 export const RASTER_EXTENSIONS = new Set([
@@ -18,7 +18,9 @@ export const RASTER_EXTENSIONS = new Set([
 ]);
 
 export interface VideoSettings {
+  encoder: VideoConfig["encoder"];
   mp4: VideoConfig["mp4"];
+  thumbnails: VideoConfig["thumbnails"] | null;
   poster: VideoConfig["poster"];
   /** HLS settings, or null when HLS is disabled for this element. */
   hls: VideoConfig["hls"] | null;
@@ -43,10 +45,22 @@ export interface GifSettings {
   poster: { format: VideoConfig["poster"]["format"]; quality: number };
 }
 
+export interface ConvertSettings {
+  formats: ImagesConfig["formats"];
+  quality: ImagesConfig["quality"];
+}
+
+export interface OgSettings {
+  maxSize: number;
+  quality: number;
+}
+
 export type AssetJob =
   | { kind: "video"; file: string; settings: VideoSettings }
   | { kind: "image"; file: string; settings: ImageSettings }
   | { kind: "poster"; file: string; settings: PosterSettings }
+  | { kind: "convert"; file: string; settings: ConvertSettings }
+  | { kind: "og"; file: string; settings: OgSettings }
   | { kind: "gif"; file: string; settings: GifSettings };
 
 export interface OutputFile {
@@ -59,6 +73,7 @@ export interface HlsVariant {
   height: number;
   width: number;
   bandwidth: number;
+  codecs?: string;
 }
 
 export interface VideoResult {
@@ -70,7 +85,15 @@ export interface VideoResult {
   sourceBytes: number;
   mp4: OutputFile & { mode: "remux" | "reencode" };
   poster?: OutputFile & { width: number; height: number };
-  hls?: { master: string; variants: HlsVariant[]; bytes: number };
+  hls?: {
+    master: string;
+    variants: HlsVariant[];
+    bytes: number;
+    segmentType?: "fmp4" | "mpegts";
+    /** Per-title bitrate factor applied to the ladder (1 = configured bitrates). */
+    factor?: number;
+  };
+  thumbnails?: { vtt: string; sheets: number; bytes: number };
 }
 
 export interface ImageVariant extends OutputFile {
@@ -100,6 +123,9 @@ export interface PosterResult {
   file: OutputFile;
 }
 
+export type { CaptionsResult } from "./ffmpeg/captions.js";
+import type { CaptionsResult } from "./ffmpeg/captions.js";
+
 export interface GifResult {
   kind: "gif";
   /** Intrinsic size of the GIF (what the `<img>` rendered at). */
@@ -115,7 +141,25 @@ export interface GifResult {
   passthrough?: boolean;
 }
 
-export type AssetResult = VideoResult | ImageResult | PosterResult | GifResult;
+export interface ConvertResult {
+  kind: "convert";
+  width: number;
+  height: number;
+  sourceBytes: number;
+  sourceFormat: string;
+  variants: Array<OutputFile & { format: "avif" | "webp" }>;
+}
+
+export interface OgResult {
+  kind: "og";
+  width: number;
+  height: number;
+  sourceBytes: number;
+  file: OutputFile;
+}
+
+export type AssetResult =
+  VideoResult | ImageResult | PosterResult | CaptionsResult | ConvertResult | OgResult | GifResult;
 
 export interface AssetMeta<R extends AssetResult = AssetResult> {
   key: string;
@@ -128,7 +172,9 @@ export interface AssetMeta<R extends AssetResult = AssetResult> {
 export function videoSettingsFor(config: ResolvedConfig, opts: { noHls: boolean }): VideoSettings {
   const v = config.video;
   return {
+    encoder: v.encoder,
     mp4: v.mp4,
+    thumbnails: v.thumbnails.enabled ? v.thumbnails : null,
     poster: v.poster,
     hls: v.hls.enabled && !opts.noHls ? v.hls : null,
   };
@@ -156,6 +202,14 @@ export function gifSettingsFor(config: ResolvedConfig): GifSettings {
     maxHeight: mp4.maxHeight,
     poster: { format: poster.format, quality: poster.quality },
   };
+}
+
+export function convertSettingsFor(config: ResolvedConfig): ConvertSettings {
+  return { formats: config.images.formats, quality: config.images.quality };
+}
+
+export function ogSettingsFor(config: ResolvedConfig): OgSettings {
+  return { maxSize: 1200, quality: config.images.quality.jpeg };
 }
 
 /** Identity of a job for de-duplication: same file + same settings → processed once. */

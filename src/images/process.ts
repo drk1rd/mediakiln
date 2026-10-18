@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import sharp, { type Sharp } from "sharp";
+import sharp, { type Sharp } from "./sharp.js";
 import type {
   ImageResult,
   ImageSettings,

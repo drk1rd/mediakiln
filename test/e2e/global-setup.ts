@@ -21,6 +21,18 @@ export default async function globalSetup() {
 <video id="lazyhls" controls muted src="/media/long.mp4"></video>
 </body></html>`,
   );
+  writeFileSync(
+    path.join(site.dir, "subs.vtt"),
+    "WEBVTT\n\n00:00:00.500 --> 00:00:05.000\nHello from mediakiln\n",
+  );
+  writeFileSync(
+    path.join(site.dir, "captions.html"),
+    `<!doctype html><html><body>
+<video id="cc" controls muted src="/media/long.mp4">
+  <track kind="subtitles" src="/subs.vtt" srclang="en" label="English" default>
+</video>
+</body></html>`,
+  );
   const summary = await optimize({
     dir: site.dir,
     configFile: false,
