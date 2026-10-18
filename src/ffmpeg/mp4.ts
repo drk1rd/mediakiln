@@ -28,8 +28,9 @@ export function decideMp4Mode(
     const audio = p.hasAudio ? `/${p.audioCodec}` : "";
     return { mode: "reencode", reason: `${p.videoCodec}/${p.pixFmt}${audio} is not web-ready` };
   }
-  if (p.height > mp4.maxHeight)
-    return { mode: "reencode", reason: `height ${p.height} > ${mp4.maxHeight}` };
+  const shortSide = Math.min(p.width, p.height);
+  if (shortSide > mp4.maxHeight)
+    return { mode: "reencode", reason: `${shortSide}p > ${mp4.maxHeight}p` };
   const max = maxReasonableBitrate(p.width, p.height);
   if (p.bitrate > max)
     return {
@@ -59,12 +60,23 @@ export function remuxArgs(input: string, output: string): string[] {
   ];
 }
 
+/**
+ * Scale filter capping the short side at `maxHeight` ("1080p" means 1080 on the short side, so
+ * portrait videos aren't shrunk to 608x1080) and keeping both dimensions even.
+ */
+export function capFilter(maxHeight: number, portrait: boolean): string {
+  return portrait
+    ? `scale='min(${maxHeight},trunc(iw/2)*2)':-2`
+    : `scale=-2:'min(${maxHeight},trunc(ih/2)*2)'`;
+}
+
 export function reencodeArgs(
   input: string,
   output: string,
   mp4: VideoConfig["mp4"],
-  hasAudio: boolean,
+  source: { hasAudio: boolean; width: number; height: number },
 ): string[] {
+  const { hasAudio } = source;
   return [
     "-y",
     "-hide_banner",
@@ -76,7 +88,7 @@ export function reencodeArgs(
     "0:v:0",
     ...(hasAudio ? ["-map", "0:a:0"] : []),
     "-vf",
-    `scale=-2:'min(${mp4.maxHeight},trunc(ih/2)*2)'`,
+    capFilter(mp4.maxHeight, source.height > source.width),
     "-c:v",
     "libx264",
     "-preset",

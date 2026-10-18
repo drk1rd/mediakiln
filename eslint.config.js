@@ -15,6 +15,7 @@ export default tseslint.config(
       ".mediakiln-cache/**",
       "test-results/**",
       "playwright-report/**",
+      "test/.tmp/**",
     ],
   },
   js.configs.recommended,

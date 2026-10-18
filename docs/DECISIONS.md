@@ -39,3 +39,25 @@ Notes on places where the implementation differs from, or fills gaps in, the ori
   `_mediakiln/<hash>/` (matching `meta.json` key) are reused rather than rebuilt; the manifest
   merges by hash.
 - **Summary bytes** count what a visitor downloads: source file → `video.mp4` for videos.
+
+## HLS and runtime (M2)
+
+- **"1080p" means the short side.** Rendition heights and `mp4.maxHeight` apply to the shorter
+  dimension, so a portrait 1080x1920 phone video keeps 1080x1920 instead of shrinking to
+  608x1080. Landscape behaves exactly as the spec describes.
+- **ffmpeg writes `hls/master.m3u8`** next to the `v%v/` folders with relative variant URIs;
+  verified with ffmpeg 9. We parse it after encoding and fail the asset if any variant lacks
+  `BANDWIDTH` or `RESOLUTION`, or if the variant count is wrong.
+- **One `split` is skipped for a single rendition**; `-maxrate` is 1.07× and `-bufsize` 1.5× the
+  target bitrate, matching the reference command.
+- **hls.js ESM build.** `hls.light.min.js` in the output is hls.js's ES module build
+  (`dist/hls.light.min.mjs`), so the loader can `import()` it. The loader also accepts a UMD build
+  via `window.Hls`. The filename stays `.js` because some servers lack a MIME type for `.mjs`.
+- **Loader targets ES2020**, not ES2018: it needs `import.meta.url` to find hls.js relative to
+  itself (which keeps custom `base` paths working). Every browser that runs module scripts with
+  dynamic `import()` has `import.meta`. The bundle is ~0.8 KB gzipped.
+- **Reduced motion** applies to every mediakiln-managed video, including eager MP4-only autoplay
+  videos (detected by their `<source>` living under the output folder).
+- **E2E runs in Playwright's Chromium and WebKit** and asserts on attributes, network requests
+  and hls.js taking over the element (`blob:` src), not decoded frames. Open-source Chromium
+  has no H.264 decoder.

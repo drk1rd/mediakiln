@@ -113,6 +113,8 @@ describe("decideMp4Mode", () => {
     expect(decideMp4Mode({ ...base, pixFmt: "yuv444p" }, mp4).mode).toBe("reencode");
     expect(decideMp4Mode({ ...base, audioCodec: "opus" }, mp4).mode).toBe("reencode");
     expect(decideMp4Mode({ ...base, width: 3840, height: 2160 }, mp4).mode).toBe("reencode");
+    // portrait 1080x1920 is "1080p": fine to remux
+    expect(decideMp4Mode({ ...base, width: 1080, height: 1920 }, mp4).mode).toBe("remux");
     expect(decideMp4Mode({ ...base, bitrate: 12_000_000 }, mp4).mode).toBe("reencode");
     expect(decideMp4Mode({ ...base, width: 640, height: 360, bitrate: 2_500_000 }, mp4).mode).toBe(
       "reencode",
@@ -157,13 +159,22 @@ describe("argument builders", () => {
   });
 
   it("re-encode with and without audio", () => {
-    const withAudio = reencodeArgs("in.mov", "out.mp4", mp4, true);
+    const withAudio = reencodeArgs("in.mov", "out.mp4", mp4, {
+      hasAudio: true,
+      width: 1920,
+      height: 1080,
+    });
     expect(withAudio.join(" ")).toMatchInlineSnapshot(
       `"-y -hide_banner -loglevel error -i in.mov -map 0:v:0 -map 0:a:0 -vf scale=-2:'min(1080,trunc(ih/2)*2)' -c:v libx264 -preset medium -crf 23 -profile:v high -pix_fmt yuv420p -c:a aac -b:a 128k -ac 2 -movflags +faststart out.mp4"`,
     );
-    const noAudio = reencodeArgs("in.mov", "out.mp4", { ...mp4, crf: 28, maxHeight: 720 }, false);
+    const noAudio = reencodeArgs(
+      "in.mov",
+      "out.mp4",
+      { ...mp4, crf: 28, maxHeight: 720 },
+      { hasAudio: false, width: 1080, height: 1920 },
+    );
     expect(noAudio.join(" ")).toMatchInlineSnapshot(
-      `"-y -hide_banner -loglevel error -i in.mov -map 0:v:0 -vf scale=-2:'min(720,trunc(ih/2)*2)' -c:v libx264 -preset medium -crf 28 -profile:v high -pix_fmt yuv420p -an -movflags +faststart out.mp4"`,
+      `"-y -hide_banner -loglevel error -i in.mov -map 0:v:0 -vf scale='min(720,trunc(iw/2)*2)':-2 -c:v libx264 -preset medium -crf 28 -profile:v high -pix_fmt yuv420p -an -movflags +faststart out.mp4"`,
     );
   });
 

@@ -92,6 +92,36 @@ describe("optimize() on the fixture site", () => {
     expect(post().match(/_mediakiln\/runtime\/loader\.js/g)).toHaveLength(1);
   });
 
+  it("generates HLS only when warranted", () => {
+    const m = manifest();
+    const longHls = m.assets.filter(
+      (a) => a.source === "media/long.mp4" && a.result.kind === "video" && a.result.hls,
+    );
+    expect(longHls).toHaveLength(1); // the data-mk-no-hls copy has none
+    const hash = longHls[0]!.hash;
+    const master = read(`_mediakiln/${hash}/hls/master.m3u8`);
+    expect(master.match(/#EXT-X-STREAM-INF/g)).toHaveLength(3);
+    expect(master).toContain("RESOLUTION=640x360");
+    expect(master).toContain("RESOLUTION=1920x1080");
+    for (const v of ["v0", "v1", "v2"]) {
+      const playlist = read(`_mediakiln/${hash}/hls/${v}/index.m3u8`);
+      expect(playlist).toContain("#EXT-X-PLAYLIST-TYPE:VOD");
+      expect(existsSync(path.join(site.dir, `_mediakiln/${hash}/hls/${v}/seg_000.ts`))).toBe(true);
+    }
+    expect(firstHtml.index).toContain(`data-mk-hls="/_mediakiln/${hash}/hls/master.m3u8"`);
+    // short clip under both thresholds → MP4 only
+    const short = m.assets.find((a) => a.source === "media/short.mp4")!;
+    expect(short.result.kind === "video" && short.result.hls).toBeFalsy();
+    expect(post()).not.toMatch(/data-mk-no-hls|data-mk-eager/);
+  });
+
+  it("copies the runtime with the hls.js license", () => {
+    for (const f of ["loader.js", "hls.light.min.js", "LICENSE-hls.js.txt"]) {
+      expect(existsSync(path.join(site.dir, "_mediakiln/runtime", f))).toBe(true);
+    }
+    expect(read("_mediakiln/runtime/LICENSE-hls.js.txt")).toContain("Apache License");
+  });
+
   it("writes a manifest", () => {
     const m = manifest();
     expect(m.assets.filter((a) => a.kind === "video")).toHaveLength(5);

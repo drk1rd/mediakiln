@@ -8,6 +8,8 @@ import { posterArgs, posterTime } from "./poster.js";
 import { probe, type ProbeResult } from "./probe.js";
 import { formatCommand, run } from "./run.js";
 import { encodePoster } from "../images/poster.js";
+import { dirSize } from "../util/fs.js";
+import { hlsArgs, parseMasterPlaylist, selectRenditions, shouldUseHls } from "./hls.js";
 
 export interface VideoContext {
   bins: FfmpegBinaries;
@@ -41,7 +43,7 @@ async function buildMp4(
     return { path: "video.mp4", bytes: await size(out), mode: "remux" };
   }
 
-  await ffmpeg(ctx, reencodeArgs(input, out, settings.mp4, info.hasAudio));
+  await ffmpeg(ctx, reencodeArgs(input, out, settings.mp4, info));
   const bytes = await size(out);
 
   // A re-encode that comes out bigger than a plain faststart remux isn't worth it.
@@ -67,7 +69,7 @@ async function buildPoster(
   outDir: string,
   info: ProbeResult,
   settings: VideoSettings["poster"],
-  maxHeight: number,
+  maxShortSide: number,
 ): Promise<VideoResult["poster"]> {
   const jpg = path.join(outDir, "poster.jpg");
   await ffmpeg(ctx, posterArgs(input, jpg, posterTime(settings.atSec, info.duration)));
@@ -76,10 +78,45 @@ async function buildPoster(
     outDir,
     settings.format,
     settings.quality,
-    maxHeight,
+    maxShortSide,
   );
   if (!settings.keepJpeg && file !== "poster.jpg") await fs.rm(jpg, { force: true });
   return { path: file, ...meta };
+}
+
+async function buildHls(
+  ctx: VideoContext,
+  input: string,
+  outDir: string,
+  info: ProbeResult,
+  settings: NonNullable<VideoSettings["hls"]>,
+  preset: string,
+): Promise<VideoResult["hls"]> {
+  const hlsDir = path.join(outDir, "hls");
+  const renditions = selectRenditions(settings.renditions, info);
+  ctx.logger.debug(`hls: ${renditions.map((r) => `${r.height}p`).join(", ")}`);
+  await fs.mkdir(hlsDir, { recursive: true });
+  for (let i = 0; i < renditions.length; i++) {
+    await fs.mkdir(path.join(hlsDir, `v${i}`), { recursive: true });
+  }
+  await ffmpeg(
+    ctx,
+    hlsArgs({
+      input,
+      hlsDir,
+      renditions,
+      source: info,
+      hasAudio: info.hasAudio,
+      segmentSec: settings.segmentSec,
+      preset,
+    }),
+  );
+  const master = await fs.readFile(path.join(hlsDir, "master.m3u8"), "utf8");
+  const variants = parseMasterPlaylist(master).map(({ uri: _uri, ...v }) => v);
+  if (variants.length !== renditions.length) {
+    throw new Error(`master.m3u8 lists ${variants.length} variants, expected ${renditions.length}`);
+  }
+  return { master: "hls/master.m3u8", variants, bytes: await dirSize(hlsDir) };
 }
 
 export interface ProcessVideoOptions {
@@ -100,8 +137,21 @@ export async function processVideo(
   );
 
   const mp4 = await buildMp4(ctx, input, outDir, info, settings);
-  const outHeight = Math.min(info.height, settings.mp4.maxHeight);
-  const poster = await buildPoster(ctx, input, outDir, info, settings.poster, outHeight);
+  const poster = await buildPoster(
+    ctx,
+    input,
+    outDir,
+    info,
+    settings.poster,
+    settings.mp4.maxHeight,
+  );
+
+  let hls: VideoResult["hls"];
+  if (settings.hls && shouldUseHls(info, settings.hls)) {
+    hls = await buildHls(ctx, input, outDir, info, settings.hls, settings.mp4.preset);
+  } else {
+    ctx.logger.debug(`hls: skipped (${settings.hls ? "below thresholds" : "disabled"})`);
+  }
 
   return {
     kind: "video",
@@ -112,5 +162,6 @@ export async function processVideo(
     sourceBytes: info.size,
     mp4,
     poster,
+    hls,
   };
 }
