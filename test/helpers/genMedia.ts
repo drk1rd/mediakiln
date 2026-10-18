@@ -130,6 +130,41 @@ export const webm = () =>
     ]),
   );
 
+/**
+ * 3s animated GIF at 10 fps with odd dimensions (321x241), so the MP4 needs even-size scaling.
+ * The palette pass keeps it a realistic size for a GIF.
+ */
+export const animatedGif = () =>
+  once("anim.gif", (out) =>
+    ffmpeg([
+      "-f",
+      "lavfi",
+      "-i",
+      "testsrc2=duration=3:size=322x242:rate=10",
+      "-vf",
+      "format=rgb24,crop=321:241:0:0,split[a][b];[a]palettegen[p];[b][p]paletteuse",
+      "-f",
+      "gif",
+      out,
+    ]),
+  );
+
+/** A single-frame GIF: must stay an `<img>`. */
+export const stillGif = () =>
+  once("still.gif", (out) =>
+    ffmpeg([
+      "-f",
+      "lavfi",
+      "-i",
+      "testsrc2=size=200x100:rate=1",
+      "-frames:v",
+      "1",
+      "-f",
+      "gif",
+      out,
+    ]),
+  );
+
 /** Noisy gradient so encoders have real work to do. */
 async function noisyImage(width: number, height: number) {
   const channels = 3;
@@ -178,5 +213,7 @@ export async function generateAll() {
     hero: await heroJpg(),
     small: await smallPng(),
     oriented: await orientedJpg(),
+    anim: await animatedGif(),
+    still: await stillGif(),
   };
 }

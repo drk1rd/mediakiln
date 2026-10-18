@@ -46,6 +46,12 @@ Left: the original MP4. Right: after mediakiln. From the
   `decoding="async"`.
 - EXIF orientation applied, metadata stripped, never bigger than the original.
 
+**Animated GIFs** (`<img src="….gif">`)
+
+- Converted to `<video autoplay muted loop playsinline>` with an H.264 MP4 (often 5–20× smaller)
+  and a WebP poster; `alt` becomes `aria-label`, `class`/`style`/`width`/`height` are kept.
+- Single-frame GIFs stay images. Turn it off with `images.gifToVideo: false` (or `--no-video`).
+
 **Everything**
 
 - Content-hash cache: each asset is processed once, across builds, locally and in CI.
@@ -226,7 +232,8 @@ export default {
     quality: { avif: 50, webp: 75, jpeg: 78, png: 80 },
     sizes: "100vw", // default sizes attribute
     lazy: true,
-    skip: ["**/*.svg", "**/*.gif"],
+    skip: ["**/*.svg"], // globs (relative to the site) to leave alone, GIFs included
+    gifToVideo: true, // animated GIFs → muted looping MP4 <video> (needs ffmpeg)
   },
 };
 ```
@@ -377,8 +384,11 @@ folder around.
 **Can I keep my original files?** Yes, by default (`keepOriginals: true`). The rewritten
 HTML just stops pointing at them.
 
-**What about `<img>` already inside `<picture>`, CSS backgrounds or GIFs?** Not in v1; such
-elements are left alone. See the roadmap in the [changelog](CHANGELOG.md).
+**What about GIFs?** Animated GIFs in `<img>` become muted looping videos (see above).
+Transparency is lost in the conversion, so put `data-mk-skip` on GIFs that rely on it. GIFs in CSS stay as they are.
+
+**What about `<img>` already inside `<picture>` or CSS backgrounds?** Not yet; such elements
+are left alone. See the roadmap in the [changelog](CHANGELOG.md).
 
 **Licensing of ffmpeg and H.264?** mediakiln doesn't bundle ffmpeg. ffmpeg builds with
 libx264 are GPL-licensed and H.264 is patent-encumbered in some jurisdictions; you're
