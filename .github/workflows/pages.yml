@@ -28,7 +28,10 @@ jobs:
         with:
           dir: examples/plain-html/_site
           # Project pages are served from /<repo>/
-          args: --base /${{ github.event.repository.name }}/
+          args: >-
+            --config examples/plain-html/mediakiln.config.json
+            --base /${{ github.event.repository.name }}/
+            --site https://${{ github.repository_owner }}.github.io
       - uses: actions/upload-pages-artifact@v3
         with:
           path: examples/plain-html/_site

@@ -1,0 +1,7 @@
+{
+  "report": true,
+  "video": {
+    "hls": { "codecs": ["h264", "hevc"], "perTitle": true },
+    "thumbnails": { "enabled": true }
+  }
+}
