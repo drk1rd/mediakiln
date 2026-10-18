@@ -4,7 +4,7 @@
 #   docker run --rm -v "$PWD/dist:/site" -v "$PWD/.mediakiln-cache:/work/.mediakiln-cache" \
 #     ghcr.io/drk1rd/mediakiln /site
 
-FROM node:22-slim AS build
+FROM node:26-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
@@ -12,7 +12,7 @@ COPY tsconfig.json tsup.config.ts ./
 COPY src ./src
 RUN npm run build && npm prune --omit=dev --ignore-scripts
 
-FROM node:22-slim
+FROM node:26-slim
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ffmpeg \
   && rm -rf /var/lib/apt/lists/*
