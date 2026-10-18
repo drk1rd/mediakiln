@@ -2,7 +2,11 @@
 
 A static page with raw media that shows off every mediakiln feature: HLS in H.264 and HEVC
 with per-title bitrates, captions inside the stream, thumbnails, a GIF turned into video, a CSS
-background with `image-set()`, `og:image` and the build report. It's hosted on Cloudflare Pages.
+background with `image-set()`, `og:image` and the build report. It's live at [mediakiln.pages.dev](https://mediakiln.pages.dev).
+
+On every push to `main`, [`.github/workflows/demo-site.yml`](../../.github/workflows/demo-site.yml)
+builds it and force-pushes the finished site to the `demo-site` branch, which Cloudflare Pages
+serves with no build step (production branch `demo-site`, output directory `/`).
 
 Build the finished site (needs ffmpeg) and upload the folder:
 

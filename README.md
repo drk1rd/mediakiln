@@ -23,7 +23,7 @@ mediakiln v1.1.1 — ./dist
 
 <sub>The same 30 s, 16 Mbps 1080p video over a 6 Mbps link, ten seconds after pressing play.
 Left: the original MP4. Right: after mediakiln. From the
-[benchmarks](docs/BENCHMARKS.md).</sub>
+[benchmarks](docs/BENCHMARKS.md). **[Live demo](https://mediakiln.pages.dev)**.</sub>
 
 ## What it does
 
@@ -126,7 +126,8 @@ The action installs ffmpeg if the runner lacks it, restores and saves the cache 
 Inputs: `dir` (required), `args`, `cache` (default `"true"`), `node-version` (default `22`).
 
 This repository's CI runs the action on [`examples/plain-html`](examples/plain-html), the demo
-site, which is hosted on Cloudflare Pages.
+site, which is hosted on Cloudflare Pages at [mediakiln.pages.dev](https://mediakiln.pages.dev)
+(published by [`.github/workflows/demo-site.yml`](.github/workflows/demo-site.yml)).
 
 ## Docker
 
