@@ -10,6 +10,8 @@ export default tseslint.config(
       "coverage/**",
       "examples/**/dist/**",
       "examples/**/_site/**",
+      "examples/**/site/**",
+      "cloudflare-site/**",
       "examples/**/node_modules/**",
       "examples/**/.astro/**",
       "**/.mediakiln-cache/**",

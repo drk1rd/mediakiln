@@ -11,3 +11,4 @@ examples/**/dist/
 examples/**/_site/
 examples/**/.astro/
 .claude/
+cloudflare-site/

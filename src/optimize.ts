@@ -651,10 +651,10 @@ async function removeOriginals(all: PlannedJob[], outRoot: string, logger: Logge
   const ok = new Set<string>();
   const keep = new Set<string>();
   for (const j of all) {
-    // A GIF that wasn't worth converting is still referenced by its <img>.
-    const passthroughGif =
-      j.outcome?.meta.result.kind === "gif" && j.outcome.meta.result.passthrough;
-    if (!j.outcome || j.job.kind === "convert" || passthroughGif) keep.add(j.job.file);
+    // Images and GIFs that weren't worth re-encoding are still referenced by their <img>.
+    const result = j.outcome?.meta.result;
+    const passthrough = (result?.kind === "gif" || result?.kind === "image") && result.passthrough;
+    if (!j.outcome || j.job.kind === "convert" || passthrough) keep.add(j.job.file);
     else ok.add(j.job.file);
   }
   for (const file of ok) {

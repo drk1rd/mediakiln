@@ -12,7 +12,7 @@ npx github:drk1rd/mediakiln ./dist
 ```
 
 ```
-mediakiln v1.1.0 — ./dist
+mediakiln v1.1.1 — ./dist
   videos   2 processed (1 HLS, 1 MP4-only), 0 cached     62.3 MB → 41.6 MB
   images   4 processed, 0 cached     12.0 MB → 20.4 KB
   pages    1 rewritten
@@ -23,7 +23,7 @@ mediakiln v1.1.0 — ./dist
 
 <sub>The same 30 s, 16 Mbps 1080p video over a 6 Mbps link, ten seconds after pressing play.
 Left: the original MP4. Right: after mediakiln. From the
-[benchmarks](docs/BENCHMARKS.md). [Live demo](https://drk1rd.github.io/mediakiln/).</sub>
+[benchmarks](docs/BENCHMARKS.md).</sub>
 
 ## What it does
 
@@ -77,7 +77,7 @@ Requires Node.js 20+ and ffmpeg (with libx264) on your `PATH`.
 npx github:drk1rd/mediakiln ./dist
 
 # pinned
-npx github:drk1rd/mediakiln#v1.1.0 ./dist
+npx github:drk1rd/mediakiln#v1.1.1 ./dist
 
 # as a dev dependency (also gives you the framework plugins)
 npm i -D github:drk1rd/mediakiln#v1
@@ -125,9 +125,8 @@ The action installs ffmpeg if the runner lacks it, restores and saves the cache 
 `actions/cache`, writes a job summary, and exposes the JSON summary as `outputs.summary`.
 Inputs: `dir` (required), `args`, `cache` (default `"true"`), `node-version` (default `22`).
 
-This repository deploys [`examples/plain-html`](examples/plain-html) to GitHub Pages with its
-own action ([live demo](https://drk1rd.github.io/mediakiln/)). See
-[`.github/workflows/pages.yml`](.github/workflows/pages.yml).
+This repository's CI runs the action on [`examples/plain-html`](examples/plain-html), the demo
+site, which is hosted on Cloudflare Pages.
 
 ## Docker
 

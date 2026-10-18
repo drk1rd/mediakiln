@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-18
+
+### Fixed
+
+- `keepOriginals: false` no longer deletes images that passed through unchanged (their `<img>`
+  still points at the original).
+
+### Changed
+
+- The demo site moved to Cloudflare Pages; `examples/plain-html/build-site.sh` builds the
+  ready-to-upload folder. The GitHub Pages workflow is gone.
+
 ## [1.1.0] - 2026-10-18
 
 The roadmap release: more of the page is optimized, video streams better, and builds share
@@ -45,7 +57,7 @@ work.
   - `mediakiln/docusaurus` plugin and [docs/RECIPES.md](docs/RECIPES.md) for Next.js,
     SvelteKit, Nuxt, VitePress, Gatsby, Hugo and Jekyll.
 - **Project**: CI on Linux, macOS and Windows; contributing guide, security policy, issue
-  templates and Dependabot. The example site is live at https://drk1rd.github.io/mediakiln/.
+  templates and Dependabot.
 
 ### Changed
 
@@ -88,7 +100,8 @@ Ideas for after v1: animated GIF → MP4/WebM (done after 1.0.1), AV1 renditions
 `<picture>`, CSS `background-image`, a Markdown-source mode, watch mode for dev servers, and
 scrubbing thumbnail sprites.
 
-[Unreleased]: https://github.com/drk1rd/mediakiln/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/drk1rd/mediakiln/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/drk1rd/mediakiln/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/drk1rd/mediakiln/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/drk1rd/mediakiln/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/drk1rd/mediakiln/releases/tag/v1.0.0

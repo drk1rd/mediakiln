@@ -10,3 +10,4 @@ test/.tmp
 examples/**/.astro
 examples/**/package-lock.json
 .claude
+examples/**/site

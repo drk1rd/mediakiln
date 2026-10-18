@@ -329,3 +329,38 @@ describe("docusaurus plugin", () => {
     expect(html).toMatch(/src="\/docs\/_mediakiln\/[0-9a-f]{12}\/img-1080\.jpg"/);
   });
 });
+
+describe("keepOriginals: false", () => {
+  it("keeps images that passed through unchanged (their <img> still points at them)", async () => {
+    const dir = site("keep-originals");
+    // A pixel-art pattern grows when resampled, so it passes through untouched.
+    const w = 1200,
+      h = 800;
+    const px = Buffer.alloc(w * h);
+    for (let i = 0; i < px.length; i++) px[i] = ((i * 2654435761) >>> 28) & 1 ? 255 : 0;
+    await sharp(px, { raw: { width: w, height: h, channels: 1 } })
+      .png({ palette: true, colours: 2 })
+      .toFile(path.join(dir, "img/pattern.png"));
+    writeFileSync(
+      path.join(dir, "index.html"),
+      `<img src="/img/hero.jpg" alt=""><img src="/img/pattern.png" alt="">`,
+    );
+    const s = await optimize({
+      dir,
+      configFile: false,
+      cache: false,
+      keepOriginals: false,
+      logger: silentLogger,
+    });
+    expect(s.failures).toEqual([]);
+    const m = JSON.parse(readFileSync(path.join(dir, "_mediakiln/manifest.json"), "utf8"));
+    expect(
+      m.assets.find((a: { source: string }) => a.source === "img/pattern.png").result.passthrough,
+    ).toBe(true);
+    expect(readFileSync(path.join(dir, "index.html"), "utf8")).toContain(
+      '<img src="/img/pattern.png"',
+    );
+    expect(existsSync(path.join(dir, "img/pattern.png"))).toBe(true);
+    expect(existsSync(path.join(dir, "img/hero.jpg"))).toBe(false);
+  });
+});
