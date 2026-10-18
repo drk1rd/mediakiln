@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import sharp from "sharp";
+import sharp from "./sharp.js";
 import type { ConvertResult, ConvertSettings, OgResult, OgSettings } from "../assets.js";
 
 const EXT = { avif: "avif", webp: "webp" } as const;

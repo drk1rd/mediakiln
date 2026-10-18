@@ -59,7 +59,7 @@ test("HLS video loads the master playlist and segments", async ({ page, browserN
       .poll(() => urls(requests).some((u) => /\/hls\/v\d\/index\.m3u8$/.test(u)))
       .toBe(true);
     await expect
-      .poll(() => urls(requests).some((u) => /\/hls\/v\d\/seg_\d+\.ts$/.test(u)), {
+      .poll(() => urls(requests).some((u) => /\/hls\/v\d\/seg_\d+\.(ts|m4s)$/.test(u)), {
         timeout: 15_000,
       })
       .toBe(true);
