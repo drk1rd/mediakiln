@@ -1,6 +1,6 @@
 {
   "name": "mediakiln",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Bake the media in a static site so it's ready to stream: faststart MP4, HLS, posters, AVIF/WebP, srcset.",
   "license": "MIT",
   "author": "Suryansh Prajapati",

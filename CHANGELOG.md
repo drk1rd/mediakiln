@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-18
+
+### Changed
+
+- Removed the GitHub Pages deploy workflow; the example site will be hosted elsewhere.
+- CI: the action self-test accepts assets restored from the cache.
+
 ## [1.0.0] - 2026-10-18
 
 First release.
@@ -33,5 +40,6 @@ Ideas for after v1: animated GIF → MP4/WebM, AV1 renditions, `<img>` inside ex
 `<picture>`, CSS `background-image`, a Markdown-source mode, watch mode for dev servers, and
 scrubbing thumbnail sprites.
 
-[Unreleased]: https://github.com/drk1rd/mediakiln/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/drk1rd/mediakiln/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/drk1rd/mediakiln/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/drk1rd/mediakiln/releases/tag/v1.0.0
