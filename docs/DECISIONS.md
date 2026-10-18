@@ -135,3 +135,16 @@ Notes on places where the implementation differs from, or fills gaps in, the ori
 - **Installing from GitHub with npm ≥ 11.19** prints an `install-scripts` warning about
   mediakiln's `prepare` script. It's harmless: npm builds `dist/` while packing the git
   dependency; the warning is about re-running `prepare` after install.
+
+## Polish (M7)
+
+- **Docker image** is `node:22-slim` + Debian's ffmpeg, multi-arch (amd64/arm64), built and
+  pushed to ghcr.io by the release workflow; CI builds it and runs it on the example site.
+  `/work` is world-writable so the default cache works under `--user`.
+- **`--dry-run`** scans, resolves and plans jobs (with de-duplication) but never probes,
+  encodes or writes. Counts are reported as "to process"; HLS vs MP4-only isn't known without
+  probing, so it isn't reported.
+- **Benchmarks use generated media** (camera-like H.264 at ~16 Mbps, grainy 12 MP photos), the
+  same as the tests, so anyone can reproduce them with `scripts/bench.mts`. The throttled
+  server limits bandwidth per response, not per connection pool, which slightly favours pages
+  that make many parallel requests (the raw page).

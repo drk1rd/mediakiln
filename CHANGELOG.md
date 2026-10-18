@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-18
+
+First release.
+
 ### Added
 
 - `mediakiln <dir>` CLI and `optimize()` API: optimizes a built static site in place.
@@ -18,3 +22,16 @@ All notable changes to this project are documented here. The format follows
 - Content-hash cache (`.mediakiln-cache`) with atomic writes; re-runs are idempotent.
 - GitHub Action (`uses: drk1rd/mediakiln@v1`) with cache and a job summary.
 - Per-element opt-outs: `data-mk-skip`, `data-mk-eager`, `data-mk-no-hls`, `data-mk-sizes`.
+- Framework plugins: `mediakiln/vite`, `mediakiln/astro`, `mediakiln/eleventy`.
+- Docker image (`ghcr.io/drk1rd/mediakiln`) with ffmpeg included.
+- `--dry-run` and `--json`; exit code 2 when individual assets fail.
+- Reproducible benchmark script (`scripts/bench.mts`) and [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
+
+### Not yet
+
+Ideas for after v1: animated GIF → MP4/WebM, AV1 renditions, `<img>` inside existing
+`<picture>`, CSS `background-image`, a Markdown-source mode, watch mode for dev servers, and
+scrubbing thumbnail sprites.
+
+[Unreleased]: https://github.com/drk1rd/mediakiln/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/drk1rd/mediakiln/releases/tag/v1.0.0

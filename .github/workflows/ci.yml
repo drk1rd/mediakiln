@@ -93,3 +93,17 @@ jobs:
         run: |
           grep -q '/_mediakiln/' examples/astro/dist/index.html
           grep -q 'data-mk-hls=' examples/astro/dist/index.html
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ffmpeg (to build the example site)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - run: docker build -t mediakiln:ci .
+      - run: bash examples/plain-html/build.sh
+      - name: Run the image on the example site
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -v "$PWD/examples/plain-html/_site:/site" mediakiln:ci /site
+          grep -q 'data-mk-hls=' examples/plain-html/_site/index.html

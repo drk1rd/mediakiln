@@ -269,3 +269,38 @@ describe("cache", () => {
     expect(existsSync(cacheDir)).toBe(false);
   });
 });
+
+describe("dry run", () => {
+  it("reports what would change and writes nothing", async () => {
+    const site = await makeSite();
+    try {
+      const snapshot = () =>
+        readdirSync(site.dir, { recursive: true, withFileTypes: true })
+          .filter((e) => e.isFile())
+          .map((e) => {
+            const p = path.join(e.parentPath, e.name);
+            return `${path.relative(site.dir, p)}:${readFileSync(p).length}`;
+          })
+          .sort();
+      const before = snapshot();
+      const html = readFileSync(path.join(site.dir, "index.html"), "utf8");
+      const s = await optimize({
+        dir: site.dir,
+        configFile: false,
+        dryRun: true,
+        cacheDir: path.join(site.root, "c"),
+        logger: silentLogger,
+      });
+      expect(s.dryRun).toBe(true);
+      expect(s.videos.processed).toBe(5);
+      expect(s.images.processed).toBe(4); // 3 images + 1 author poster
+      expect(s.pages.rewritten).toBe(2);
+      expect(s.videos.bytesBefore).toBeGreaterThan(0);
+      expect(snapshot()).toEqual(before);
+      expect(readFileSync(path.join(site.dir, "index.html"), "utf8")).toBe(html);
+      expect(existsSync(path.join(site.root, "c"))).toBe(false);
+    } finally {
+      site.cleanup();
+    }
+  });
+});

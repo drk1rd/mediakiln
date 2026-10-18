@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+test
+examples
+docs
+.git
+.github
+.mediakiln-cache
+test-results
+playwright-report
+*.log
