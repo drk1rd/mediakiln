@@ -6,19 +6,53 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-18
+
+The roadmap release: more of the page is optimized, video streams better, and builds share
+work.
+
 ### Added
 
-- Animated GIFs in `<img>` become `<video autoplay muted loop playsinline>` with an H.264 MP4
-  and a WebP poster, typically 5–20× smaller. On by default (`images.gifToVideo`); alt text
-  becomes `aria-label`, `data-mk-skip`/`data-mk-eager` work as usual, and single-frame GIFs
-  stay images. Needs ffmpeg; without it GIFs are left alone with a warning.
+- **Video**
+  - HLS uses fMP4/CMAF segments with a 1-second first segment for a faster start
+    (`video.hls.segmentType`, `video.hls.firstSegmentSec`).
+  - HEVC and AV1 renditions next to H.264 (`video.hls.codecs`), at proportionally lower
+    bitrates.
+  - Hardware encoders: `video.encoder` = `"videotoolbox"`, `"nvenc"` or `"auto"`.
+  - Per-title encoding (`video.hls.perTitle`): bitrates scaled to each video's complexity.
+  - Local `<track>` WebVTT captions are added to the HLS stream as subtitle renditions
+    (`video.captions`); players list them exactly once.
+  - Thumbnail sprites and a WebVTT thumbnail track (`video.thumbnails`), exposed as
+    `data-mk-thumbnails`.
+- **Images**
+  - Animated GIFs in `<img>` become `<video autoplay muted loop playsinline>` with an H.264 MP4
+    and a WebP poster, typically 5–20× smaller (`images.gifToVideo`, on by default).
+  - `<img>` inside an existing `<picture>`, including art-directed `<source media>`
+    (`images.pictures`).
+  - Existing local `srcset`s get AVIF/WebP alternatives with the same descriptors
+    (`images.srcset`).
+  - CSS `url()` backgrounds in stylesheets, `<style>` and `style=""` get an `image-set()`
+    (`images.css`).
+  - `og:image` / `twitter:image` resized to a 1200px JPEG, absolute with `site`
+    (`images.openGraph`, `--site`).
+- **Workflow**
+  - Shared S3-compatible cache (`remoteCache`): AWS S3, Cloudflare R2, MinIO, Backblaze B2.
+  - `--watch` / `watch()` re-optimizes when the output changes.
+  - `report.html` listing every asset and the bytes saved (`report`, `--report`).
+  - `_headers` for Cloudflare Pages and Netlify caching `/_mediakiln/*` for a year (`headers`).
+  - Experimental Markdown mode (`markdown.enabled`): `![alt](img)` and `![](clip.mp4)` become
+    optimized HTML in place.
+  - `mediakiln/docusaurus` plugin and [docs/RECIPES.md](docs/RECIPES.md) for Next.js,
+    SvelteKit, Nuxt, VitePress, Gatsby, Hugo and Jekyll.
+- **Project**: CI on Linux, macOS and Windows; contributing guide, security policy, issue
+  templates and Dependabot. The example site is live at https://drk1rd.github.io/mediakiln/.
 
 ### Changed
 
-- `images.skip` defaults to `["**/*.svg"]`; GIFs are governed by `images.gifToVideo`. A
-  config that lists `**/*.gif` in `images.skip` keeps GIFs untouched.
-
-- The example site is deployed to GitHub Pages again: https://drk1rd.github.io/mediakiln/
+- Runtime files have versioned names (`loader.<hash>.js`, `hls.light.<version>.min.js`) so
+  everything under `/_mediakiln/` can be cached as immutable. Pages from older runs keep working.
+- `images.skip` defaults to `["**/*.svg"]`; GIFs are governed by `images.gifToVideo`.
+- Cache format version 3: the first run after upgrading re-encodes once.
 
 ## [1.0.1] - 2026-10-18
 
@@ -54,6 +88,7 @@ Ideas for after v1: animated GIF → MP4/WebM (done after 1.0.1), AV1 renditions
 `<picture>`, CSS `background-image`, a Markdown-source mode, watch mode for dev servers, and
 scrubbing thumbnail sprites.
 
-[Unreleased]: https://github.com/drk1rd/mediakiln/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/drk1rd/mediakiln/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/drk1rd/mediakiln/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/drk1rd/mediakiln/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/drk1rd/mediakiln/releases/tag/v1.0.0

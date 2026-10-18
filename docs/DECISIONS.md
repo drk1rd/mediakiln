@@ -184,3 +184,81 @@ Notes on places where the implementation differs from, or fills gaps in, the ori
   same as the tests, so anyone can reproduce them with `scripts/bench.mts`. The throttled
   server limits bandwidth per response, not per connection pool, which slightly favours pages
   that make many parallel requests (the raw page).
+
+## v1.1
+
+### Video
+
+- **fMP4 is the default segment type.** CMAF segments are what HEVC and AV1 need in HLS, every
+  current player supports them, and hls.js transmuxes less. `segmentType: "mpegts"` keeps the
+  1.0 behaviour.
+- **A 1-second first segment** (`-hls_init_time`, plus a keyframe expression that forces a
+  keyframe at 1 s, then every `segmentSec`) gets the first frame on screen sooner without
+  shortening every segment.
+- **Extra codecs are extra variants in the same master playlist**, H.264 first. Players skip
+  variants whose `CODECS` they can't decode; ffmpeg writes correct `hvc1…`/`av01…` strings.
+  HEVC uses the `hvc1` tag (required by Apple). Bitrates are scaled by 0.65 (HEVC) and 0.55
+  (AV1) relative to H.264. SVT-AV1 only accepts a max bitrate in CRF mode, so AV1 variants use
+  plain VBR.
+- **Hardware encoders**: VideoToolbox has no AV1 encoder, so AV1 falls back to SVT-AV1 on Macs.
+  VideoToolbox's constant-quality scale maps from CRF as `q ≈ 100 − 1.75·crf` (CRF 23 ≈ q 60);
+  NVENC uses `-rc vbr -cq <crf>`. `"auto"` doesn't trust the encoder list (NVENC is listed on
+  machines without a GPU) and runs a two-frame test encode instead.
+- **Per-title** encodes up to 12 s from the middle of the video at x264 veryfast CRF 23 and
+  scales the ladder by measured ÷ 2.5 Mbps (the reference shrinks with area below 720p),
+  clamped to 0.35–1.25, with a 150 kbps floor per variant. It's opt-in because it adds an
+  encode per video.
+- **Captions live in a separate small asset**: a second master playlist that points back at the
+  video's variants (`../<videoHash>/hls/…`) and adds `EXT-X-MEDIA:TYPE=SUBTITLES` renditions.
+  Editing a `.vtt` therefore never triggers a re-encode. WebVTT gets an `X-TIMESTAMP-MAP`
+  (MPEGTS 0 for fMP4; the first segment's PTS for MPEG-TS).
+- **No duplicate caption tracks.** WebKit's native HLS exposes the in-stream subtitles, so
+  the loader removes the matching `<track>` once the in-stream track appears, carrying over
+  `default`. Chromium's native HLS doesn't expose them, so nothing is removed there. hls.js runs
+  with `enableWebVTT: false`, because with MSE the page's `<track>` already works and hls.js
+  would add the same cues to it again. All three paths are covered by E2E tests.
+- **Thumbnails** are JPEG sprite sheets (10 rows max per sheet) plus a WebVTT track with
+  `#xywh=` cues, the format Vidstack, video.js, Plyr and JW Player read. Native controls don't
+  use it, so it's opt-in and exposed as `data-mk-thumbnails`.
+
+### Images and pages
+
+- **`<picture>` support**: a picture whose `<source>`s already have a `type` is considered done.
+  Otherwise each art-directed `<source>` expands into typed AVIF/WebP sources plus a fallback,
+  with the same `media`, and gets `width`/`height` (valid on `<source>` and needed for
+  art-directed aspect ratios). Formats that lose to the fallback are dropped per image.
+- **Existing `srcset`s** are converted at their own sizes ("convert" jobs, no resizing), keeping
+  descriptors; a format is offered only if every candidate has it.
+- **CSS**: an `image-set()` declaration is added _after_ the original, so browsers without
+  `image-set(type())` keep the first one. Only `background-image` and single-image
+  `background` shorthands are touched (shorthand layers with gradients are left alone).
+  Generated CSS uses single quotes so it's safe inside `style="…"`. Parsing uses PostCSS;
+  unparseable CSS is left untouched.
+- **og:image** is resized to fit 1200×1200 (no cropping), flattened onto white and encoded as
+  JPEG, which every crawler accepts. Absolute URLs on `site`'s origin count as local. Width and
+  height metas are added only when the page has none.
+- **`style` attributes on `img`/`video`/`source`/`meta`/`picture` are left alone** to avoid
+  overlapping edits with the rules that rewrite those tags.
+- **`keepOriginals: false`** never deletes files that the output still uses as fallbacks
+  (`srcset` candidates, CSS backgrounds, passthrough GIFs).
+
+### Workflow
+
+- **Versioned runtime names** (`loader.<sha8>.js`, `hls.light.<version>.min.js`): with them,
+  everything under `/_mediakiln/` is immutable, so `_headers` can cache the whole folder for a
+  year. Older pages that reference `loader.js` are still detected as having the runtime.
+- **`_headers`** is updated inside `# mediakiln:start/end` markers, leaving the user's rules
+  alone. It's harmless on hosts that ignore it, so it's on by default.
+- **Remote cache**: one object per entry ("mkpack": a uint32 index length, a JSON index, then
+  the files' bytes), streamed both ways with `UNSIGNED-PAYLOAD` SigV4 over HTTPS, using no AWS
+  SDK. The signer is tested against AWS's published GET Object example. Lookups go site →
+  local → remote → encode. New builds are uploaded when `write` is true, and so are local
+  entries the remote lacks. Remote errors never fail a build. Unpacking rejects paths that
+  escape the entry.
+- **Watch mode** debounces `fs.watch` events, ignores the output folder and `_headers`, and
+  never overlaps runs. Because runs are idempotent, the pages mediakiln itself rewrites trigger
+  one extra no-op run and then it settles.
+- **Markdown mode** masks fenced code, inline code and HTML comments (keeping every offset)
+  before looking for raw HTML and `![alt](src)`. `![](x.mp4)` becomes a `<video>`. `.mdx` is
+  excluded by default because JSX needs different attribute names (`srcSet`).
+- **The report** is only rewritten when its content changes, keeping re-runs byte-identical.

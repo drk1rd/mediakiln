@@ -91,7 +91,7 @@ jobs:
         run: |
           echo "$SUMMARY" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const s=JSON.parse(d); if (s.failures.length || !(s.videos.processed + s.videos.cached) || !(s.images.processed + s.images.cached)) process.exit(1)})'
           grep -q 'data-mk-hls=' examples/plain-html/_site/index.html
-          test -f examples/plain-html/_site/_mediakiln/runtime/loader.js
+          ls examples/plain-html/_site/_mediakiln/runtime/loader.*.js
 
   astro-example:
     runs-on: ubuntu-latest
