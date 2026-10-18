@@ -32,7 +32,9 @@ beforeAll(async () => {
   mkdirSync(TMP, { recursive: true });
   root = mkdtempSync(path.join(TMP, "plugins-"));
 });
-afterAll(() => rmSync(root, { recursive: true, force: true }));
+afterAll(() => {
+  if (root) rmSync(root, { recursive: true, force: true });
+});
 
 describe("vite plugin", () => {
   it("optimizes build.outDir after a production build, honoring base", async () => {

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, renameSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 
@@ -18,7 +18,13 @@ async function once(name: string, make: (out: string) => void | Promise<void>): 
   mkdirSync(MEDIA_DIR, { recursive: true });
   const tmp = path.join(MEDIA_DIR, `tmp-${process.pid}-${name}`);
   await make(tmp);
-  renameSync(tmp, out);
+  try {
+    renameSync(tmp, out);
+  } catch (err) {
+    // Another test worker generated it first. POSIX rename replaces the file; Windows refuses.
+    if (!existsSync(out)) throw err;
+    rmSync(tmp, { force: true });
+  }
   return out;
 }
 
