@@ -44,7 +44,7 @@ jobs:
         run: npx playwright install --with-deps chromium webkit
       - if: runner.os == 'Linux'
         run: npm run test:e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure() && runner.os == 'Linux'
         with:
           name: playwright-report
