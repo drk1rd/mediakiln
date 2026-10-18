@@ -1,0 +1,12 @@
+{
+  "key": "652abe8ca8bec79be94d4f56aa785e89e1e98cb1c4963f0d2e399d8655717bbf",
+  "hash": "652abe8ca8be",
+  "cacheVersion": "3",
+  "source": "index.html",
+  "result": {
+    "kind": "captions",
+    "master": "master.m3u8",
+    "tracks": 1,
+    "video": "cff12bb41f16"
+  }
+}

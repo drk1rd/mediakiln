@@ -1,0 +1,105 @@
+{
+  "key": "df7089029597ed70628cffe2949e2a60350ee6c0de0d531afaf82c6acf5416f1",
+  "hash": "df7089029597",
+  "cacheVersion": "3",
+  "source": "img/hero.jpg",
+  "result": {
+    "kind": "image",
+    "width": 2400,
+    "height": 1350,
+    "sourceBytes": 76566,
+    "fallbackFormat": "jpeg",
+    "variants": [
+      {
+        "path": "img-480.avif",
+        "format": "avif",
+        "width": 480,
+        "bytes": 732
+      },
+      {
+        "path": "img-480.webp",
+        "format": "webp",
+        "width": 480,
+        "bytes": 1388
+      },
+      {
+        "path": "img-480.jpg",
+        "format": "jpeg",
+        "width": 480,
+        "bytes": 3388
+      },
+      {
+        "path": "img-768.avif",
+        "format": "avif",
+        "width": 768,
+        "bytes": 1065
+      },
+      {
+        "path": "img-768.webp",
+        "format": "webp",
+        "width": 768,
+        "bytes": 2628
+      },
+      {
+        "path": "img-768.jpg",
+        "format": "jpeg",
+        "width": 768,
+        "bytes": 6535
+      },
+      {
+        "path": "img-1080.avif",
+        "format": "avif",
+        "width": 1080,
+        "bytes": 2064
+      },
+      {
+        "path": "img-1080.webp",
+        "format": "webp",
+        "width": 1080,
+        "bytes": 4254
+      },
+      {
+        "path": "img-1080.jpg",
+        "format": "jpeg",
+        "width": 1080,
+        "bytes": 10936
+      },
+      {
+        "path": "img-1600.avif",
+        "format": "avif",
+        "width": 1600,
+        "bytes": 4039
+      },
+      {
+        "path": "img-1600.webp",
+        "format": "webp",
+        "width": 1600,
+        "bytes": 7726
+      },
+      {
+        "path": "img-1600.jpg",
+        "format": "jpeg",
+        "width": 1600,
+        "bytes": 19434
+      },
+      {
+        "path": "img-2400.avif",
+        "format": "avif",
+        "width": 2400,
+        "bytes": 6996
+      },
+      {
+        "path": "img-2400.webp",
+        "format": "webp",
+        "width": 2400,
+        "bytes": 15666
+      },
+      {
+        "path": "img-2400.jpg",
+        "format": "jpeg",
+        "width": 2400,
+        "bytes": 40985
+      }
+    ]
+  }
+}

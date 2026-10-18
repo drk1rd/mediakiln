@@ -1,0 +1,15 @@
+{
+  "key": "b23429aec9de28c286886de24c10926d94abfcda2a20cfa176fafe71de6be226",
+  "hash": "b23429aec9de",
+  "cacheVersion": "3",
+  "source": "img/pattern.png",
+  "result": {
+    "kind": "image",
+    "width": 1200,
+    "height": 800,
+    "sourceBytes": 57563,
+    "fallbackFormat": "png",
+    "variants": [],
+    "passthrough": true
+  }
+}

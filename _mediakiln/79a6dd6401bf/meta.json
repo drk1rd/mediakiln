@@ -1,0 +1,24 @@
+{
+  "key": "79a6dd6401bffeb66490624a8844a657b5beff6760d3620aaeb7d54f719371d0",
+  "hash": "79a6dd6401bf",
+  "cacheVersion": "3",
+  "source": "img/zoom.gif",
+  "result": {
+    "kind": "gif",
+    "width": 480,
+    "height": 270,
+    "frames": 60,
+    "duration": 4,
+    "sourceBytes": 4082545,
+    "mp4": {
+      "path": "video.mp4",
+      "bytes": 1345576
+    },
+    "poster": {
+      "path": "poster.webp",
+      "bytes": 41884,
+      "width": 480,
+      "height": 270
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "key": "189aed52d12e1cc708b78481fa6acca0436060a7857aac0cc613c55b1dc1e2d1",
+  "hash": "189aed52d12e",
+  "cacheVersion": "3",
+  "source": "img/hero.jpg",
+  "result": {
+    "kind": "convert",
+    "width": 2400,
+    "height": 1350,
+    "sourceBytes": 76566,
+    "sourceFormat": "jpeg",
+    "variants": [
+      {
+        "format": "avif",
+        "path": "image.avif",
+        "bytes": 6996
+      },
+      {
+        "format": "webp",
+        "path": "image.webp",
+        "bytes": 15666
+      }
+    ]
+  }
+}

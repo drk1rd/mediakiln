@@ -1,0 +1,10 @@
+WEBVTT
+
+00:00:01.000 --> 00:00:05.000
+Captions from a plain <track>, now inside the HLS stream.
+
+00:00:06.000 --> 00:00:12.000
+Every variant references the same subtitle playlist.
+
+00:00:13.000 --> 00:00:19.000
+On the MP4 fallback the original track keeps working.

@@ -1,0 +1,16 @@
+{
+  "key": "c326c25bfd4790dc732c3057362470e58dce0cb23deca0fbc63ac375915357df",
+  "hash": "c326c25bfd47",
+  "cacheVersion": "3",
+  "source": "img/hero.jpg",
+  "result": {
+    "kind": "og",
+    "width": 1200,
+    "height": 675,
+    "sourceBytes": 76566,
+    "file": {
+      "path": "og.jpg",
+      "bytes": 12824
+    }
+  }
+}

@@ -1,0 +1,310 @@
+{
+  "version": "1.1.1",
+  "generatedAt": "2026-10-18T16:32:50.139Z",
+  "outDir": "_mediakiln",
+  "assets": [
+    {
+      "source": "img/hero.jpg",
+      "kind": "convert",
+      "hash": "189aed52d12e",
+      "cached": false,
+      "bytesBefore": 76566,
+      "bytesAfter": 6996,
+      "result": {
+        "kind": "convert",
+        "width": 2400,
+        "height": 1350,
+        "sourceBytes": 76566,
+        "sourceFormat": "jpeg",
+        "variants": [
+          {
+            "format": "avif",
+            "path": "image.avif",
+            "bytes": 6996
+          },
+          {
+            "format": "webp",
+            "path": "image.webp",
+            "bytes": 15666
+          }
+        ]
+      }
+    },
+    {
+      "source": "img/hero.jpg",
+      "kind": "og",
+      "hash": "c326c25bfd47",
+      "cached": false,
+      "bytesBefore": 76566,
+      "bytesAfter": 12824,
+      "result": {
+        "kind": "og",
+        "width": 1200,
+        "height": 675,
+        "sourceBytes": 76566,
+        "file": {
+          "path": "og.jpg",
+          "bytes": 12824
+        }
+      }
+    },
+    {
+      "source": "img/hero.jpg",
+      "kind": "image",
+      "hash": "df7089029597",
+      "cached": false,
+      "bytesBefore": 76566,
+      "bytesAfter": 2064,
+      "result": {
+        "kind": "image",
+        "width": 2400,
+        "height": 1350,
+        "sourceBytes": 76566,
+        "fallbackFormat": "jpeg",
+        "variants": [
+          {
+            "path": "img-480.avif",
+            "format": "avif",
+            "width": 480,
+            "bytes": 732
+          },
+          {
+            "path": "img-480.webp",
+            "format": "webp",
+            "width": 480,
+            "bytes": 1388
+          },
+          {
+            "path": "img-480.jpg",
+            "format": "jpeg",
+            "width": 480,
+            "bytes": 3388
+          },
+          {
+            "path": "img-768.avif",
+            "format": "avif",
+            "width": 768,
+            "bytes": 1065
+          },
+          {
+            "path": "img-768.webp",
+            "format": "webp",
+            "width": 768,
+            "bytes": 2628
+          },
+          {
+            "path": "img-768.jpg",
+            "format": "jpeg",
+            "width": 768,
+            "bytes": 6535
+          },
+          {
+            "path": "img-1080.avif",
+            "format": "avif",
+            "width": 1080,
+            "bytes": 2064
+          },
+          {
+            "path": "img-1080.webp",
+            "format": "webp",
+            "width": 1080,
+            "bytes": 4254
+          },
+          {
+            "path": "img-1080.jpg",
+            "format": "jpeg",
+            "width": 1080,
+            "bytes": 10936
+          },
+          {
+            "path": "img-1600.avif",
+            "format": "avif",
+            "width": 1600,
+            "bytes": 4039
+          },
+          {
+            "path": "img-1600.webp",
+            "format": "webp",
+            "width": 1600,
+            "bytes": 7726
+          },
+          {
+            "path": "img-1600.jpg",
+            "format": "jpeg",
+            "width": 1600,
+            "bytes": 19434
+          },
+          {
+            "path": "img-2400.avif",
+            "format": "avif",
+            "width": 2400,
+            "bytes": 6996
+          },
+          {
+            "path": "img-2400.webp",
+            "format": "webp",
+            "width": 2400,
+            "bytes": 15666
+          },
+          {
+            "path": "img-2400.jpg",
+            "format": "jpeg",
+            "width": 2400,
+            "bytes": 40985
+          }
+        ]
+      }
+    },
+    {
+      "source": "img/pattern.png",
+      "kind": "image",
+      "hash": "b23429aec9de",
+      "cached": false,
+      "bytesBefore": 57563,
+      "bytesAfter": 57563,
+      "result": {
+        "kind": "image",
+        "width": 1200,
+        "height": 800,
+        "sourceBytes": 57563,
+        "fallbackFormat": "png",
+        "variants": [],
+        "passthrough": true
+      }
+    },
+    {
+      "source": "img/zoom.gif",
+      "kind": "gif",
+      "hash": "79a6dd6401bf",
+      "cached": false,
+      "bytesBefore": 4082545,
+      "bytesAfter": 1345576,
+      "result": {
+        "kind": "gif",
+        "width": 480,
+        "height": 270,
+        "frames": 60,
+        "duration": 4,
+        "sourceBytes": 4082545,
+        "mp4": {
+          "path": "video.mp4",
+          "bytes": 1345576
+        },
+        "poster": {
+          "path": "poster.webp",
+          "bytes": 41884,
+          "width": 480,
+          "height": 270
+        }
+      }
+    },
+    {
+      "source": "media/intro.mp4",
+      "kind": "video",
+      "hash": "cff12bb41f16",
+      "cached": false,
+      "bytesBefore": 21818176,
+      "bytesAfter": 13398267,
+      "result": {
+        "kind": "video",
+        "width": 1920,
+        "height": 1080,
+        "duration": 20,
+        "hasAudio": true,
+        "sourceBytes": 21818176,
+        "mp4": {
+          "path": "video.mp4",
+          "bytes": 13398267,
+          "mode": "reencode"
+        },
+        "poster": {
+          "path": "poster.webp",
+          "bytes": 47194,
+          "width": 1920,
+          "height": 1080
+        },
+        "hls": {
+          "master": "hls/master.m3u8",
+          "variants": [
+            {
+              "bandwidth": 497200,
+              "width": 640,
+              "height": 360,
+              "codecs": "avc1.64001e,mp4a.40.2"
+            },
+            {
+              "bandwidth": 1512500,
+              "width": 1280,
+              "height": 720,
+              "codecs": "avc1.64001f,mp4a.40.2"
+            },
+            {
+              "bandwidth": 2589400,
+              "width": 1920,
+              "height": 1080,
+              "codecs": "avc1.640028,mp4a.40.2"
+            },
+            {
+              "bandwidth": 359700,
+              "width": 640,
+              "height": 360,
+              "codecs": "hvc1.1.4.L63.B01,mp4a.40.2"
+            },
+            {
+              "bandwidth": 1031800,
+              "width": 1280,
+              "height": 720,
+              "codecs": "hvc1.1.4.L93.B01,mp4a.40.2"
+            },
+            {
+              "bandwidth": 1732500,
+              "width": 1920,
+              "height": 1080,
+              "codecs": "hvc1.1.4.L120.B01,mp4a.40.2"
+            }
+          ],
+          "bytes": 17393917,
+          "segmentType": "fmp4",
+          "factor": 0.45
+        },
+        "thumbnails": {
+          "vtt": "thumbnails/thumbnails.vtt",
+          "sheets": 1,
+          "bytes": 8585
+        }
+      }
+    },
+    {
+      "source": "media/loop.mp4",
+      "kind": "video",
+      "hash": "4bd8a4bf9730",
+      "cached": false,
+      "bytesBefore": 2793304,
+      "bytesAfter": 2039919,
+      "result": {
+        "kind": "video",
+        "width": 1280,
+        "height": 720,
+        "duration": 4,
+        "hasAudio": false,
+        "sourceBytes": 2793304,
+        "mp4": {
+          "path": "video.mp4",
+          "bytes": 2039919,
+          "mode": "reencode"
+        },
+        "poster": {
+          "path": "poster.webp",
+          "bytes": 43416,
+          "width": 1280,
+          "height": 720
+        },
+        "thumbnails": {
+          "vtt": "thumbnails/thumbnails.vtt",
+          "sheets": 1,
+          "bytes": 3121
+        }
+      }
+    }
+  ]
+}

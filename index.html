@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mediakiln — plain HTML example</title>
+    <meta property="og:title" content="mediakiln demo" />
+    <meta property="og:image" content="https://mediakiln.pages.dev/_mediakiln/c326c25bfd47/og.jpg" /><meta property="og:image:width" content="1200"><meta property="og:image:height" content="675">
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <video class="bg" autoplay muted loop playsinline preload="metadata" width="1280" height="720" poster="/_mediakiln/4bd8a4bf9730/poster.webp" data-mk-thumbnails="/_mediakiln/4bd8a4bf9730/thumbnails/thumbnails.vtt"><source src="/_mediakiln/4bd8a4bf9730/video.mp4" type="video/mp4"></video>
+      <div class="hero-text">
+        <h1>mediakiln</h1>
+        <p>
+          This page shipped with a 1080p MP4 that couldn't start until fully downloaded, a 2400px
+          JPEG, a PNG, a GIF and a CSS background. One build step later, they are below.
+        </p>
+      </div>
+    </header>
+
+    <main>
+      <section>
+        <h2>Adaptive video</h2>
+        <p>
+          Faststart MP4 plus an HLS ladder in H.264 and HEVC, with per-title bitrates and a short
+          first segment. The captions travel inside the stream; the scrub thumbnails are a sprite
+          sheet with a WebVTT track (<code>data-mk-thumbnails</code>).
+        </p>
+        <video controls preload="none" width="1920" height="1080" poster="/_mediakiln/cff12bb41f16/poster.webp" data-mk-hls="/_mediakiln/652abe8ca8be/master.m3u8" data-mk-thumbnails="/_mediakiln/cff12bb41f16/thumbnails/thumbnails.vtt" data-mk-lazy><source src="/_mediakiln/cff12bb41f16/video.mp4" type="video/mp4">
+          <track kind="captions" src="media/intro.en.vtt" srclang="en" label="English" default data-mk-in-hls />
+        </video>
+      </section>
+
+      <section>
+        <h2>Responsive images</h2>
+        <p>AVIF and WebP at several widths, with intrinsic dimensions and lazy loading.</p>
+        <picture><source type="image/avif" srcset="/_mediakiln/df7089029597/img-480.avif 480w, /_mediakiln/df7089029597/img-768.avif 768w, /_mediakiln/df7089029597/img-1080.avif 1080w, /_mediakiln/df7089029597/img-1600.avif 1600w, /_mediakiln/df7089029597/img-2400.avif 2400w" sizes="100vw"><source type="image/webp" srcset="/_mediakiln/df7089029597/img-480.webp 480w, /_mediakiln/df7089029597/img-768.webp 768w, /_mediakiln/df7089029597/img-1080.webp 1080w, /_mediakiln/df7089029597/img-1600.webp 1600w, /_mediakiln/df7089029597/img-2400.webp 2400w" sizes="100vw"><img src="/_mediakiln/df7089029597/img-1080.jpg" alt="A soft multicolour gradient" srcset="/_mediakiln/df7089029597/img-480.jpg 480w, /_mediakiln/df7089029597/img-768.jpg 768w, /_mediakiln/df7089029597/img-1080.jpg 1080w, /_mediakiln/df7089029597/img-1600.jpg 1600w, /_mediakiln/df7089029597/img-2400.jpg 2400w" sizes="100vw" width="2400" height="1350" decoding="async" /></picture>
+        <img src="img/pattern.png" alt="A rule 110 cellular automaton pattern" width="1200" height="800" loading="lazy" decoding="async" />
+      </section>
+
+      <section>
+        <h2>GIFs and CSS backgrounds</h2>
+        <p>
+          The animated GIF is now a muted looping video; the CSS background is an
+          <code>image-set()</code> with AVIF and WebP.
+        </p>
+        <video autoplay muted loop playsinline aria-label="A Mandelbrot zoom" width="480" height="270" poster="/_mediakiln/79a6dd6401bf/poster.webp" preload="none" data-mk-lazy><source src="/_mediakiln/79a6dd6401bf/video.mp4" type="video/mp4"></video>
+        <div class="card-bg" role="img" aria-label="Gradient background"></div>
+      </section>
+
+      <section>
+        <h2>Opt-outs</h2>
+        <p>Elements with <code>data-mk-skip</code> are left exactly as written:</p>
+        <img data-mk-skip src="img/pattern.png" alt="Untouched PNG" width="300" />
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        Optimized by <a href="https://github.com/drk1rd/mediakiln">mediakiln</a>. View source to see
+        the rewritten markup, or read the <a href="_mediakiln/report.html">build report</a>.
+      </p>
+    </footer>
+  <script type="module" src="/_mediakiln/runtime/loader.871e76f0.js"></script>
+  </body>
+</html>

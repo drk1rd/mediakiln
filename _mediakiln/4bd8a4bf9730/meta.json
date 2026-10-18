@@ -1,0 +1,30 @@
+{
+  "key": "4bd8a4bf9730ca70e6d5740f02b38f060928dbb70ef3adaac4887edf46ba695e",
+  "hash": "4bd8a4bf9730",
+  "cacheVersion": "3",
+  "source": "media/loop.mp4",
+  "result": {
+    "kind": "video",
+    "width": 1280,
+    "height": 720,
+    "duration": 4,
+    "hasAudio": false,
+    "sourceBytes": 2793304,
+    "mp4": {
+      "path": "video.mp4",
+      "bytes": 2039919,
+      "mode": "reencode"
+    },
+    "poster": {
+      "path": "poster.webp",
+      "bytes": 43416,
+      "width": 1280,
+      "height": 720
+    },
+    "thumbnails": {
+      "vtt": "thumbnails/thumbnails.vtt",
+      "sheets": 1,
+      "bytes": 3121
+    }
+  }
+}

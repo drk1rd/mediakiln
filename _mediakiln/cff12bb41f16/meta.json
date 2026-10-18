@@ -1,0 +1,74 @@
+{
+  "key": "cff12bb41f16f47effd6b8804371db5c5847c415e191766c92bff161e902c23f",
+  "hash": "cff12bb41f16",
+  "cacheVersion": "3",
+  "source": "media/intro.mp4",
+  "result": {
+    "kind": "video",
+    "width": 1920,
+    "height": 1080,
+    "duration": 20,
+    "hasAudio": true,
+    "sourceBytes": 21818176,
+    "mp4": {
+      "path": "video.mp4",
+      "bytes": 13398267,
+      "mode": "reencode"
+    },
+    "poster": {
+      "path": "poster.webp",
+      "bytes": 47194,
+      "width": 1920,
+      "height": 1080
+    },
+    "hls": {
+      "master": "hls/master.m3u8",
+      "variants": [
+        {
+          "bandwidth": 497200,
+          "width": 640,
+          "height": 360,
+          "codecs": "avc1.64001e,mp4a.40.2"
+        },
+        {
+          "bandwidth": 1512500,
+          "width": 1280,
+          "height": 720,
+          "codecs": "avc1.64001f,mp4a.40.2"
+        },
+        {
+          "bandwidth": 2589400,
+          "width": 1920,
+          "height": 1080,
+          "codecs": "avc1.640028,mp4a.40.2"
+        },
+        {
+          "bandwidth": 359700,
+          "width": 640,
+          "height": 360,
+          "codecs": "hvc1.1.4.L63.B01,mp4a.40.2"
+        },
+        {
+          "bandwidth": 1031800,
+          "width": 1280,
+          "height": 720,
+          "codecs": "hvc1.1.4.L93.B01,mp4a.40.2"
+        },
+        {
+          "bandwidth": 1732500,
+          "width": 1920,
+          "height": 1080,
+          "codecs": "hvc1.1.4.L120.B01,mp4a.40.2"
+        }
+      ],
+      "bytes": 17393917,
+      "segmentType": "fmp4",
+      "factor": 0.45
+    },
+    "thumbnails": {
+      "vtt": "thumbnails/thumbnails.vtt",
+      "sheets": 1,
+      "bytes": 8585
+    }
+  }
+}
