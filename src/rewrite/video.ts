@@ -9,6 +9,8 @@ export interface VideoOutputs {
   baseUrl: string;
   /** Public URL of an optimized author-provided poster, if there was one. */
   posterUrl?: string;
+  /** Public URL of a master playlist that adds the page's captions to the HLS stream. */
+  captionsMasterUrl?: string;
 }
 
 /** Attributes consumed by mediakiln that should not survive into the output. */
@@ -33,7 +35,8 @@ export function rewriteVideo(
   }
   const poster = out.posterUrl ?? (result.poster ? baseUrl + result.poster.path : undefined);
   if (poster && (out.posterUrl || !getAttr(el, "poster"))) set.push(["poster", poster]);
-  if (result.hls) set.push(["data-mk-hls", baseUrl + result.hls.master]);
+  if (result.hls) set.push(["data-mk-hls", out.captionsMasterUrl ?? baseUrl + result.hls.master]);
+  if (result.thumbnails) set.push(["data-mk-thumbnails", baseUrl + result.thumbnails.vtt]);
   if (lazy) set.push(["data-mk-lazy", true]);
 
   const loc = el.sourceCodeLocation!;
@@ -51,6 +54,19 @@ export function rewriteVideo(
     edits.push({ start: fl.startOffset, end: fl.endOffset, text: source });
   } else {
     edits.push({ start: startTag.startOffset, end: startTag.endOffset, text: newStart + source });
+  }
+  // Tracks now also live in the HLS stream; the loader removes these once HLS is attached so
+  // players don't list them twice. Without HLS (MP4 fallback) they keep working as-is.
+  if (result.hls && out.captionsMasterUrl) {
+    for (const t of ref.tracks) {
+      const tl = t.el.sourceCodeLocation?.startTag;
+      if (!tl) continue;
+      edits.push({
+        start: tl.startOffset,
+        end: tl.endOffset,
+        text: rebuildStartTag(html, t.el, { set: [["data-mk-in-hls", true]] }),
+      });
+    }
   }
   for (const s of rest) {
     const sl = s.sourceCodeLocation!;

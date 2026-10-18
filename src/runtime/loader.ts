@@ -7,6 +7,8 @@
  *   HLS (Safari/iOS), via a self-hosted hls.js loaded on demand where MSE is available, and
  *   otherwise from the MP4 `<source>`, which needs no JavaScript at all.
  * - Respects `prefers-reduced-motion: reduce` by not auto-playing.
+ * - Captions mediakiln also put into the HLS stream (`track[data-mk-in-hls]`) are detached while
+ *   HLS plays, so they aren't listed twice, and restored if playback falls back to the MP4.
  *
  * Dependency-free and tiny; hls.js is only fetched on pages that need it, at most once.
  */
@@ -40,8 +42,18 @@ function play(video: HTMLVideoElement): void {
   if (video.autoplay && !reduceMotion) video.play()?.catch(() => {});
 }
 
+/** Captions that also ship inside the HLS stream; detached while HLS plays to avoid duplicates. */
+const parked = new WeakMap<HTMLVideoElement, Element[]>();
+
+function parkTracks(video: HTMLVideoElement): void {
+  const tracks = Array.from(video.querySelectorAll("track[data-mk-in-hls]"));
+  tracks.forEach((t) => t.remove());
+  parked.set(video, tracks);
+}
+
 function fallbackToMp4(video: HTMLVideoElement): void {
   video.removeAttribute("src");
+  (parked.get(video) ?? []).forEach((t) => video.appendChild(t));
   video.load();
   play(video);
 }
@@ -52,6 +64,7 @@ function attach(video: HTMLVideoElement): void {
   attached.add(video);
 
   if (video.canPlayType("application/vnd.apple.mpegurl")) {
+    parkTracks(video);
     video.src = url;
     play(video);
     return;
@@ -67,6 +80,7 @@ function attach(video: HTMLVideoElement): void {
         fallbackToMp4(video);
       }
     });
+    parkTracks(video);
     hls.loadSource(url);
     hls.attachMedia(video);
     play(video);

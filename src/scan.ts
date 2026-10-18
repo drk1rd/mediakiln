@@ -6,6 +6,7 @@ import { RASTER_EXTENSIONS, VIDEO_EXTENSIONS } from "./assets.js";
 import type { ResolvedConfig } from "./config.js";
 import { childElements, getAttr, hasAttr, parseHtml, walkElements, type Element } from "./html.js";
 import { resolveUrl, type ResolveContext } from "./resolve.js";
+import type { CaptionTrack } from "./ffmpeg/captions.js";
 import { exists, toPosix } from "./util/fs.js";
 import type { Logger } from "./util/logger.js";
 
@@ -19,6 +20,8 @@ export interface VideoRef {
   posterFile?: string;
   eager: boolean;
   noHls: boolean;
+  /** Local WebVTT `<track>` children (subtitles/captions) that can go into the HLS stream. */
+  tracks: Array<CaptionTrack & { el: Element }>;
 }
 
 export interface ImageRef {
@@ -149,10 +152,28 @@ export async function scanPage(file: string, ctx: ScanContext): Promise<PageScan
           }
         }
 
+        const tracks: VideoRef["tracks"] = [];
+        for (const t of childElements(el).filter((c) => c.tagName === "track")) {
+          const kind = (getAttr(t, "kind") ?? "subtitles").toLowerCase();
+          if (kind !== "subtitles" && kind !== "captions") continue;
+          const src = getAttr(t, "src");
+          const f = resolveLocal(src);
+          if (!f || path.extname(f).toLowerCase() !== ".vtt" || !(await exists(f))) continue;
+          tracks.push({
+            el: t,
+            file: f,
+            kind,
+            srclang: getAttr(t, "srclang"),
+            label: getAttr(t, "label"),
+            default: hasAttr(t, "default"),
+          });
+        }
+
         page.videos.push({
           el,
           file: primary,
           localSources,
+          tracks,
           posterFile,
           eager: hasAttr(el, "data-mk-eager"),
           noHls: hasAttr(el, "data-mk-no-hls"),

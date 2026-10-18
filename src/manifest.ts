@@ -6,7 +6,7 @@ import { VERSION } from "./version.js";
 export interface ManifestEntry {
   /** Source file relative to the site dir. */
   source: string;
-  kind: "video" | "image" | "poster";
+  kind: "video" | "image" | "poster" | "captions" | "css" | "og";
   hash: string;
   cached: boolean;
   bytesBefore: number;

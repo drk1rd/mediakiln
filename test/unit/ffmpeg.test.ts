@@ -165,7 +165,7 @@ describe("argument builders", () => {
       height: 1080,
     });
     expect(withAudio.join(" ")).toMatchInlineSnapshot(
-      `"-y -hide_banner -loglevel error -i in.mov -map 0:v:0 -map 0:a:0 -vf scale=-2:'min(1080,trunc(ih/2)*2)' -c:v libx264 -preset medium -crf 23 -profile:v high -pix_fmt yuv420p -c:a aac -b:a 128k -ac 2 -movflags +faststart out.mp4"`,
+      `"-y -hide_banner -loglevel error -i in.mov -map 0:v:0 -map 0:a:0 -vf scale=-2:'min(1080,trunc(ih/2)*2)' -c:v libx264 -crf:v 23 -preset:v medium -profile:v high -pix_fmt yuv420p -c:a aac -b:a 128k -ac 2 -movflags +faststart out.mp4"`,
     );
     const noAudio = reencodeArgs(
       "in.mov",
@@ -174,7 +174,7 @@ describe("argument builders", () => {
       { hasAudio: false, width: 1080, height: 1920 },
     );
     expect(noAudio.join(" ")).toMatchInlineSnapshot(
-      `"-y -hide_banner -loglevel error -i in.mov -map 0:v:0 -vf scale='min(720,trunc(iw/2)*2)':-2 -c:v libx264 -preset medium -crf 28 -profile:v high -pix_fmt yuv420p -an -movflags +faststart out.mp4"`,
+      `"-y -hide_banner -loglevel error -i in.mov -map 0:v:0 -vf scale='min(720,trunc(iw/2)*2)':-2 -c:v libx264 -crf:v 28 -preset:v medium -profile:v high -pix_fmt yuv420p -an -movflags +faststart out.mp4"`,
     );
   });
 

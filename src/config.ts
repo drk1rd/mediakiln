@@ -11,8 +11,23 @@ const renditionSchema = z.object({
   audioKbps: z.number().positive(),
 });
 
+const codecSchema = z.enum(["h264", "hevc", "av1"]);
+
+const remoteCacheSchema = z.object({
+  /** S3-compatible bucket (AWS S3, Cloudflare R2, MinIO, …). */
+  bucket: z.string().min(1),
+  prefix: z.string(),
+  /** Custom endpoint, e.g. https://<account>.r2.cloudflarestorage.com. Default: AWS. */
+  endpoint: z.string(),
+  region: z.string(),
+  /** Upload new entries (turn off for read-only CI jobs, e.g. on pull requests). */
+  write: z.boolean(),
+});
+
 const configSchema = z.object({
   base: z.string(),
+  /** Public origin of the site (https://example.com). Enables og:image and same-origin URLs. */
+  site: z.string(),
   outDirName: z
     .string()
     .min(1)
@@ -23,13 +38,33 @@ const configSchema = z.object({
   cache: z.boolean(),
   cacheDir: z.string(),
   concurrency: z.number().int().positive(),
+  remoteCache: remoteCacheSchema.nullable(),
+  /** Write `_headers` (Cloudflare Pages, Netlify) so `/_mediakiln/` is cached forever. */
+  headers: z.boolean(),
+  /** Write `<outDirName>/report.html` summarizing what changed. */
+  report: z.boolean(),
+  markdown: z.object({
+    /** Experimental: also rewrite media in Markdown files (as inline HTML). */
+    enabled: z.boolean(),
+    include: z.array(z.string()),
+  }),
   video: z.object({
     enabled: z.boolean(),
+    /** "software" (libx264/libx265/SVT-AV1), "videotoolbox" (macOS), "nvenc" (NVIDIA) or "auto". */
+    encoder: z.enum(["software", "videotoolbox", "nvenc", "auto"]),
     hls: z.object({
       enabled: z.boolean(),
       minDurationSec: z.number().nonnegative(),
       minSizeMB: z.number().nonnegative(),
       segmentSec: z.number().positive(),
+      /** Length of the first segment, for a faster start. 0 = same as segmentSec. */
+      firstSegmentSec: z.number().nonnegative(),
+      /** "fmp4" (CMAF, required for HEVC/AV1) or "mpegts". */
+      segmentType: z.enum(["fmp4", "mpegts"]),
+      /** H.264 is always included; HEVC/AV1 add extra renditions for browsers that support them. */
+      codecs: z.array(codecSchema).min(1),
+      /** Scale the ladder's bitrates to each video's complexity. */
+      perTitle: z.boolean(),
       renditions: z.array(renditionSchema).min(1),
     }),
     mp4: z.object({
@@ -56,6 +91,14 @@ const configSchema = z.object({
     }),
     preload: z.enum(["none", "metadata", "auto"]),
     lazy: z.boolean(),
+    /** Put local <track> WebVTT captions into the HLS stream as subtitle renditions. */
+    captions: z.boolean(),
+    thumbnails: z.object({
+      enabled: z.boolean(),
+      intervalSec: z.number().positive(),
+      width: z.number().int().positive(),
+      columns: z.number().int().positive(),
+    }),
   }),
   images: z.object({
     enabled: z.boolean(),
@@ -70,6 +113,14 @@ const configSchema = z.object({
     sizes: z.string(),
     lazy: z.boolean(),
     skip: z.array(z.string()),
+    /** Optimize <img> inside an existing <picture>, including art-directed <source>s. */
+    pictures: z.boolean(),
+    /** Add AVIF/WebP alternatives to an existing local srcset. */
+    srcset: z.boolean(),
+    /** Rewrite url() backgrounds in CSS files and style attributes to image-set(). */
+    css: z.object({ enabled: z.boolean(), include: z.array(z.string()) }),
+    /** Resize og:image / twitter:image to 1200px JPEG. */
+    openGraph: z.boolean(),
   }),
 });
 
@@ -77,6 +128,8 @@ export type ResolvedConfig = z.infer<typeof configSchema>;
 export type Rendition = z.infer<typeof renditionSchema>;
 export type VideoConfig = ResolvedConfig["video"];
 export type ImagesConfig = ResolvedConfig["images"];
+export type VideoCodec = z.infer<typeof codecSchema>;
+export type RemoteCacheConfig = z.infer<typeof remoteCacheSchema>;
 
 type DeepPartial<T> = T extends readonly unknown[]
   ? T
@@ -89,6 +142,7 @@ export type Config = DeepPartial<ResolvedConfig>;
 
 export const DEFAULT_CONFIG: ResolvedConfig = {
   base: "/",
+  site: "",
   outDirName: "_mediakiln",
   include: ["**/*.html"],
   exclude: [],
@@ -96,13 +150,22 @@ export const DEFAULT_CONFIG: ResolvedConfig = {
   cache: true,
   cacheDir: ".mediakiln-cache",
   concurrency: Math.max(1, os.availableParallelism?.() ?? os.cpus().length),
+  remoteCache: null,
+  headers: true,
+  report: false,
+  markdown: { enabled: false, include: ["**/*.md", "**/*.mdx"] },
   video: {
     enabled: true,
+    encoder: "software",
     hls: {
       enabled: true,
       minDurationSec: 10,
       minSizeMB: 5,
       segmentSec: 4,
+      firstSegmentSec: 1,
+      segmentType: "fmp4",
+      codecs: ["h264"],
+      perTitle: false,
       renditions: [
         { height: 360, videoKbps: 800, audioKbps: 96 },
         { height: 720, videoKbps: 2800, audioKbps: 128 },
@@ -113,6 +176,8 @@ export const DEFAULT_CONFIG: ResolvedConfig = {
     poster: { atSec: 1, format: "webp", quality: 80, keepJpeg: false },
     preload: "metadata",
     lazy: true,
+    captions: true,
+    thumbnails: { enabled: false, intervalSec: 5, width: 160, columns: 10 },
   },
   images: {
     enabled: true,
@@ -122,7 +187,19 @@ export const DEFAULT_CONFIG: ResolvedConfig = {
     sizes: "100vw",
     lazy: true,
     skip: ["**/*.svg", "**/*.gif"],
+    pictures: true,
+    srcset: true,
+    css: { enabled: true, include: ["**/*.css"] },
+    openGraph: true,
   },
+};
+
+export const REMOTE_CACHE_DEFAULTS: RemoteCacheConfig = {
+  bucket: "",
+  prefix: "mediakiln/",
+  endpoint: "",
+  region: "auto",
+  write: true,
 };
 
 const CONFIG_FILES = ["mediakiln.config.js", "mediakiln.config.mjs", "mediakiln.config.json"];
@@ -169,6 +246,9 @@ export function resolveConfig(input: unknown, logger?: Logger): ResolvedConfig {
     logger?.warn(`Unknown config key "${key}" (ignored)`);
   }
   const merged = deepMerge(DEFAULT_CONFIG, input ?? {});
+  if (isPlainObject(merged.remoteCache)) {
+    merged.remoteCache = deepMerge(REMOTE_CACHE_DEFAULTS, merged.remoteCache);
+  }
   const result = configSchema.safeParse(merged);
   if (!result.success) {
     const issues = result.error.issues
@@ -178,6 +258,12 @@ export function resolveConfig(input: unknown, logger?: Logger): ResolvedConfig {
   }
   const config = result.data;
   config.base = normalizeBase(config.base);
+  config.site = config.site.replace(/\/+$/, "");
+  // H.264 is the baseline every browser can play; other codecs are additions.
+  config.video.hls.codecs = [
+    "h264",
+    ...new Set(config.video.hls.codecs.filter((c) => c !== "h264")),
+  ];
   return config;
 }
 

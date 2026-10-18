@@ -4,7 +4,7 @@ import type { ResolvedConfig, VideoConfig, ImagesConfig } from "./config.js";
  * Bump whenever output layout or encoding logic changes, so stale cache entries
  * (and stale `_mediakiln/<hash>/` folders) are never reused.
  */
-export const MEDIAKILN_CACHE_VERSION = "2";
+export const MEDIAKILN_CACHE_VERSION = "3";
 
 export const VIDEO_EXTENSIONS = new Set([".mp4", ".mov", ".m4v", ".webm", ".mkv"]);
 export const RASTER_EXTENSIONS = new Set([
@@ -18,7 +18,9 @@ export const RASTER_EXTENSIONS = new Set([
 ]);
 
 export interface VideoSettings {
+  encoder: VideoConfig["encoder"];
   mp4: VideoConfig["mp4"];
+  thumbnails: VideoConfig["thumbnails"] | null;
   poster: VideoConfig["poster"];
   /** HLS settings, or null when HLS is disabled for this element. */
   hls: VideoConfig["hls"] | null;
@@ -51,6 +53,7 @@ export interface HlsVariant {
   height: number;
   width: number;
   bandwidth: number;
+  codecs?: string;
 }
 
 export interface VideoResult {
@@ -62,7 +65,15 @@ export interface VideoResult {
   sourceBytes: number;
   mp4: OutputFile & { mode: "remux" | "reencode" };
   poster?: OutputFile & { width: number; height: number };
-  hls?: { master: string; variants: HlsVariant[]; bytes: number };
+  hls?: {
+    master: string;
+    variants: HlsVariant[];
+    bytes: number;
+    segmentType?: "fmp4" | "mpegts";
+    /** Per-title bitrate factor applied to the ladder (1 = configured bitrates). */
+    factor?: number;
+  };
+  thumbnails?: { vtt: string; sheets: number; bytes: number };
 }
 
 export interface ImageVariant extends OutputFile {
@@ -92,7 +103,10 @@ export interface PosterResult {
   file: OutputFile;
 }
 
-export type AssetResult = VideoResult | ImageResult | PosterResult;
+export type { CaptionsResult } from "./ffmpeg/captions.js";
+import type { CaptionsResult } from "./ffmpeg/captions.js";
+
+export type AssetResult = VideoResult | ImageResult | PosterResult | CaptionsResult;
 
 export interface AssetMeta<R extends AssetResult = AssetResult> {
   key: string;
@@ -105,7 +119,9 @@ export interface AssetMeta<R extends AssetResult = AssetResult> {
 export function videoSettingsFor(config: ResolvedConfig, opts: { noHls: boolean }): VideoSettings {
   const v = config.video;
   return {
+    encoder: v.encoder,
     mp4: v.mp4,
+    thumbnails: v.thumbnails.enabled ? v.thumbnails : null,
     poster: v.poster,
     hls: v.hls.enabled && !opts.noHls ? v.hls : null,
   };

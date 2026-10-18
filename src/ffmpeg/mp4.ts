@@ -1,5 +1,6 @@
 import type { VideoConfig } from "../config.js";
 import type { ProbeResult } from "./probe.js";
+import { videoEncodeArgs, type Hardware } from "./encoders.js";
 
 export type Mp4Mode = "remux" | "reencode";
 
@@ -75,6 +76,7 @@ export function reencodeArgs(
   output: string,
   mp4: VideoConfig["mp4"],
   source: { hasAudio: boolean; width: number; height: number },
+  hw: Hardware = "software",
 ): string[] {
   const { hasAudio } = source;
   return [
@@ -89,14 +91,7 @@ export function reencodeArgs(
     ...(hasAudio ? ["-map", "0:a:0"] : []),
     "-vf",
     capFilter(mp4.maxHeight, source.height > source.width),
-    "-c:v",
-    "libx264",
-    "-preset",
-    mp4.preset,
-    "-crf",
-    String(mp4.crf),
-    "-profile:v",
-    "high",
+    ...videoEncodeArgs({ codec: "h264", hw, preset: mp4.preset, crf: mp4.crf }),
     "-pix_fmt",
     "yuv420p",
     ...(hasAudio ? ["-c:a", "aac", "-b:a", "128k", "-ac", "2"] : ["-an"]),

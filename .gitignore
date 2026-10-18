@@ -10,3 +10,4 @@ test/.tmp/
 examples/**/dist/
 examples/**/_site/
 examples/**/.astro/
+.claude/

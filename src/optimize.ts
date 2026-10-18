@@ -22,6 +22,7 @@ import {
 } from "./config.js";
 import { findFfmpeg, type FfmpegBinaries } from "./ffmpeg/binary.js";
 import { processVideo } from "./ffmpeg/video.js";
+import { buildCaptions, captionsKey, type CaptionsResult } from "./ffmpeg/captions.js";
 import { applyEdits, type Edit } from "./html.js";
 import { processImage, processPoster } from "./images/process.js";
 import { writeManifest, type ManifestEntry } from "./manifest.js";
@@ -148,6 +149,43 @@ export async function optimize(options: OptimizeOptions): Promise<Summary> {
     ),
   );
 
+  // 3b. Captions: wrap each HLS video's master with its page's <track>s as subtitle renditions.
+  const captionsFor = new Map<PageScan["videos"][number], string>();
+  if (config.video.captions && bins) {
+    for (const page of pages) {
+      for (const ref of page.videos) {
+        const outcome = videoJobs.get(ref)!.video.outcome;
+        const result = outcome?.meta.result as VideoResult | undefined;
+        if (!outcome || !result?.hls || ref.tracks.length === 0) continue;
+        const tracks = ref.tracks.map(({ el: _el, ...t }) => t);
+        try {
+          const key = await captionsKey(outcome.meta.key, tracks);
+          const done = await materialize<CaptionsResult>(
+            { outRoot, cacheDir, key, hash: key.slice(0, 12), source: page.rel },
+            (tmp) =>
+              buildCaptions(
+                {
+                  ffprobe: bins!.ffprobe,
+                  videoDir: outcome.outDir,
+                  videoHash: outcome.meta.hash,
+                  duration: result.duration,
+                  segmentType: result.hls!.segmentType ?? "mpegts",
+                  tracks,
+                },
+                tmp,
+              ),
+          );
+          captionsFor.set(
+            ref,
+            publicUrl(config.base, `${config.outDirName}/${done.meta.hash}/master.m3u8`),
+          );
+        } catch (err) {
+          logger.warn(`${page.rel}: captions not added to HLS: ${(err as Error).message}`);
+        }
+      }
+    }
+  }
+
   // 4. Rewrite pages.
   const outUrl = (hash: string) => publicUrl(config.base, `${config.outDirName}/${hash}/`);
   let needsRuntime = false;
@@ -168,6 +206,7 @@ export async function optimize(options: OptimizeOptions): Promise<Summary> {
             result: video.outcome.meta.result as VideoResult,
             baseUrl: outUrl(video.outcome.meta.hash),
             posterUrl: posterUrl || undefined,
+            captionsMasterUrl: captionsFor.get(ref),
           },
           config,
         ),
@@ -299,6 +338,8 @@ export function deliveredBytes(result: AssetResult): { before: number; after: nu
       return { before: result.sourceBytes, after: result.mp4.bytes };
     case "poster":
       return { before: result.sourceBytes, after: result.file.bytes };
+    case "captions":
+      return { before: 0, after: 0 };
     case "image": {
       const fallback = pickFallbackWidth(result.variants.map((v) => v.width));
       const preferred =

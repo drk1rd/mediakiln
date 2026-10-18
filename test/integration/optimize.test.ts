@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { optimize, type Summary } from "../../src/index.js";
 import type { Manifest } from "../../src/manifest.js";
@@ -106,7 +106,9 @@ describe("optimize() on the fixture site (video)", () => {
     for (const v of ["v0", "v1", "v2"]) {
       const playlist = read(`_mediakiln/${hash}/hls/${v}/index.m3u8`);
       expect(playlist).toContain("#EXT-X-PLAYLIST-TYPE:VOD");
-      expect(existsSync(path.join(site.dir, `_mediakiln/${hash}/hls/${v}/seg_000.ts`))).toBe(true);
+      expect(playlist).toMatch(/#EXT-X-MAP:URI="init_\d\.mp4"/);
+      expect(playlist).toContain("#EXTINF:1.000000,"); // short first segment
+      expect(existsSync(path.join(site.dir, `_mediakiln/${hash}/hls/${v}/seg_000.m4s`))).toBe(true);
     }
     expect(firstHtml.index).toContain(`data-mk-hls="/_mediakiln/${hash}/hls/master.m3u8"`);
     // short clip under both thresholds → MP4 only
@@ -299,6 +301,74 @@ describe("dry run", () => {
       expect(snapshot()).toEqual(before);
       expect(readFileSync(path.join(site.dir, "index.html"), "utf8")).toBe(html);
       expect(existsSync(path.join(site.root, "c"))).toBe(false);
+    } finally {
+      site.cleanup();
+    }
+  });
+});
+
+describe("captions and thumbnails", () => {
+  it("adds local <track> captions to the HLS stream and a thumbnail track", async () => {
+    const site = await makeSite();
+    try {
+      writeFileSync(
+        path.join(site.dir, "subs-en.vtt"),
+        "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nHello\n",
+      );
+      writeFileSync(
+        path.join(site.dir, "cc.html"),
+        `<video controls src="/media/long.mp4">\n  <track kind="captions" src="/subs-en.vtt" srclang="en" label="English" default>\n  <track kind="chapters" src="/subs-en.vtt">\n</video>`,
+      );
+      const s = await optimize({
+        dir: site.dir,
+        configFile: false,
+        cache: false,
+        include: ["cc.html"],
+        images: { enabled: false },
+        video: { ...FAST, thumbnails: { enabled: true } },
+        logger: silentLogger,
+      });
+      expect(s.failures).toEqual([]);
+      const html = readFileSync(path.join(site.dir, "cc.html"), "utf8");
+      const master = /data-mk-hls="\/(_mediakiln\/[0-9a-f]{12}\/master\.m3u8)"/.exec(html)?.[1];
+      expect(master).toBeDefined();
+      expect(html).toContain(
+        '<track kind="captions" src="/subs-en.vtt" srclang="en" label="English" default data-mk-in-hls>',
+      );
+      expect(html).toContain('<track kind="chapters" src="/subs-en.vtt">'); // not a subtitle kind
+      expect(html).toMatch(
+        /data-mk-thumbnails="\/_mediakiln\/[0-9a-f]{12}\/thumbnails\/thumbnails\.vtt"/,
+      );
+
+      const text = readFileSync(path.join(site.dir, master!), "utf8");
+      expect(text).toContain(
+        '#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="English",LANGUAGE="en",DEFAULT=YES',
+      );
+      expect(text.match(/SUBTITLES="subs"/g)).toHaveLength(3);
+      // variant URIs point back into the video's folder and exist
+      const dirOf = path.dirname(path.join(site.dir, master!));
+      for (const uri of text
+        .split("\n")
+        .filter((l) => l.endsWith("index.m3u8") && !l.startsWith("#"))) {
+        expect(existsSync(path.resolve(dirOf, uri)), uri).toBe(true);
+      }
+      const vtt = readFileSync(path.join(dirOf, "subs/0/subs.vtt"), "utf8");
+      expect(vtt.split("\n").slice(0, 2)).toEqual([
+        "WEBVTT",
+        "X-TIMESTAMP-MAP=MPEGTS:0,LOCAL:00:00:00.000",
+      ]);
+
+      // idempotent
+      const again = await optimize({
+        dir: site.dir,
+        configFile: false,
+        cache: false,
+        include: ["cc.html"],
+        images: { enabled: false },
+        video: { ...FAST, thumbnails: { enabled: true } },
+        logger: silentLogger,
+      });
+      expect(again.pages.rewritten).toBe(0);
     } finally {
       site.cleanup();
     }
