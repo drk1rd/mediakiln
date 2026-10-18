@@ -108,8 +108,8 @@ The action installs ffmpeg if the runner lacks it, restores and saves the cache 
 `actions/cache`, writes a job summary, and exposes the JSON summary as `outputs.summary`.
 Inputs: `dir` (required), `args`, `cache` (default `"true"`), `node-version` (default `22`).
 
-This repository deploys [`examples/plain-html`](examples/plain-html) to GitHub Pages with its
-own action. See [`.github/workflows/pages.yml`](.github/workflows/pages.yml).
+This repository's CI runs the action on [`examples/plain-html`](examples/plain-html). See the
+`action` job in [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ## Docker
 
