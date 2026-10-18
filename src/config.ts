@@ -70,6 +70,7 @@ const configSchema = z.object({
     sizes: z.string(),
     lazy: z.boolean(),
     skip: z.array(z.string()),
+    gifToVideo: z.boolean(),
   }),
 });
 
@@ -121,7 +122,8 @@ export const DEFAULT_CONFIG: ResolvedConfig = {
     quality: { avif: 50, webp: 75, jpeg: 78, png: 80 },
     sizes: "100vw",
     lazy: true,
-    skip: ["**/*.svg", "**/*.gif"],
+    skip: ["**/*.svg"],
+    gifToVideo: true,
   },
 };
 

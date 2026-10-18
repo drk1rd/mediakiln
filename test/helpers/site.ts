@@ -21,5 +21,7 @@ export async function makeSite(): Promise<{ dir: string; root: string; cleanup: 
   cpSync(media.hero, path.join(dir, "img/hero.jpg"));
   cpSync(media.small, path.join(dir, "img/small.png"));
   cpSync(media.oriented, path.join(dir, "img/oriented.jpg"));
+  cpSync(media.anim, path.join(dir, "img/anim.gif"));
+  cpSync(media.still, path.join(dir, "img/still.gif"));
   return { dir, root, cleanup: () => rmSync(root, { recursive: true, force: true }) };
 }

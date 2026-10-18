@@ -4,6 +4,7 @@ import picomatch from "picomatch";
 import { glob } from "tinyglobby";
 import { RASTER_EXTENSIONS, VIDEO_EXTENSIONS } from "./assets.js";
 import type { ResolvedConfig } from "./config.js";
+import { gifInfo } from "./ffmpeg/gif.js";
 import { childElements, getAttr, hasAttr, parseHtml, walkElements, type Element } from "./html.js";
 import { resolveUrl, type ResolveContext } from "./resolve.js";
 import { exists, toPosix } from "./util/fs.js";
@@ -30,12 +31,21 @@ export interface ImageRef {
   sizes?: string;
 }
 
+/** A local animated GIF in an `<img>`, to become a looping muted `<video>`. */
+export interface GifRef {
+  el: Element;
+  file: string;
+  /** Load right away (`data-mk-eager`, `fetchpriority="high"` or the first `<img>`). */
+  eager: boolean;
+}
+
 export interface PageScan {
   file: string;
   rel: string;
   html: string;
   videos: VideoRef[];
   images: ImageRef[];
+  gifs: GifRef[];
   /** A video on this page was optimized by a previous run. */
   hasProcessedVideo: boolean;
   /** The runtime loader `<script>` is already present. */
@@ -79,6 +89,7 @@ export async function scanPage(file: string, ctx: ScanContext): Promise<PageScan
     html,
     videos: [],
     images: [],
+    gifs: [],
     hasProcessedVideo: false,
     hasRuntime: false,
     injectAt: html.length,
@@ -171,21 +182,31 @@ export async function scanPage(file: string, ctx: ScanContext): Promise<PageScan
         const src = getAttr(el, "src");
         const f = resolveLocal(src);
         if (!f || isOurs(f)) break;
-        if (!RASTER_EXTENSIONS.has(path.extname(f).toLowerCase())) break;
+        const ext = path.extname(f).toLowerCase();
+        const isGif = ext === ".gif" && config.images.gifToVideo && config.video.enabled;
+        if (!isGif && !RASTER_EXTENSIONS.has(ext)) break;
         if (skipImage(toPosix(path.relative(ctx.dir, f)))) break;
         if (await missing(f, src ?? "", "image")) break;
-        page.images.push({
-          el,
-          file: f,
-          first,
-          eager: hasAttr(el, "data-mk-eager") || getAttr(el, "fetchpriority") === "high",
-          sizes: getAttr(el, "data-mk-sizes"),
-        });
+        const eager = hasAttr(el, "data-mk-eager") || getAttr(el, "fetchpriority") === "high";
+        if (isGif) {
+          if (await isAnimated(f)) page.gifs.push({ el, file: f, eager: eager || first });
+          else logger.debug(`${rel}: "${src}" is a single-frame GIF, leaving it as an image`);
+          break;
+        }
+        page.images.push({ el, file: f, first, eager, sizes: getAttr(el, "data-mk-sizes") });
         break;
       }
     }
   }
   return page;
+}
+
+async function isAnimated(file: string): Promise<boolean> {
+  try {
+    return (await gifInfo(file)).frames > 1;
+  } catch {
+    return false; // unreadable: leave the <img> alone
+  }
 }
 
 function cleanPath(url: string): string {

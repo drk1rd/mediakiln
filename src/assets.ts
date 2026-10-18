@@ -36,10 +36,18 @@ export interface PosterSettings {
   maxHeight: number;
 }
 
+export interface GifSettings {
+  crf: number;
+  preset: VideoConfig["mp4"]["preset"];
+  maxHeight: number;
+  poster: { format: VideoConfig["poster"]["format"]; quality: number };
+}
+
 export type AssetJob =
   | { kind: "video"; file: string; settings: VideoSettings }
   | { kind: "image"; file: string; settings: ImageSettings }
-  | { kind: "poster"; file: string; settings: PosterSettings };
+  | { kind: "poster"; file: string; settings: PosterSettings }
+  | { kind: "gif"; file: string; settings: GifSettings };
 
 export interface OutputFile {
   /** Path relative to the asset's output folder, POSIX separators. */
@@ -92,7 +100,22 @@ export interface PosterResult {
   file: OutputFile;
 }
 
-export type AssetResult = VideoResult | ImageResult | PosterResult;
+export interface GifResult {
+  kind: "gif";
+  /** Intrinsic size of the GIF (what the `<img>` rendered at). */
+  width: number;
+  height: number;
+  frames: number;
+  duration: number;
+  sourceBytes: number;
+  /** Absent when the MP4 came out bigger than the GIF (`passthrough`). */
+  mp4?: OutputFile;
+  poster?: OutputFile & { width: number; height: number };
+  /** True when converting didn't pay off; the `<img>` is left as it is. */
+  passthrough?: boolean;
+}
+
+export type AssetResult = VideoResult | ImageResult | PosterResult | GifResult;
 
 export interface AssetMeta<R extends AssetResult = AssetResult> {
   key: string;
@@ -123,6 +146,16 @@ export function imageSettingsFor(config: ResolvedConfig): ImageSettings {
 export function posterSettingsFor(config: ResolvedConfig): PosterSettings {
   const p = config.video.poster;
   return { format: p.format, quality: p.quality, maxHeight: config.video.mp4.maxHeight };
+}
+
+export function gifSettingsFor(config: ResolvedConfig): GifSettings {
+  const { mp4, poster } = config.video;
+  return {
+    crf: mp4.crf,
+    preset: mp4.preset,
+    maxHeight: mp4.maxHeight,
+    poster: { format: poster.format, quality: poster.quality },
+  };
 }
 
 /** Identity of a job for de-duplication: same file + same settings → processed once. */
