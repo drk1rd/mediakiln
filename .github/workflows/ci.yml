@@ -75,3 +75,21 @@ jobs:
           echo "$SUMMARY" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const s=JSON.parse(d); if (!s.videos.processed || !s.images.processed) process.exit(1)})'
           grep -q 'data-mk-hls=' examples/plain-html/_site/index.html
           test -f examples/plain-html/_site/_mediakiln/runtime/loader.js
+
+  astro-example:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - run: npm ci --ignore-scripts && npm run build
+      - name: Build examples/astro (astro build + mediakiln integration)
+        working-directory: examples/astro
+        run: npm install --no-audit --no-fund && npm run build
+      - name: Check output
+        run: |
+          grep -q '/_mediakiln/' examples/astro/dist/index.html
+          grep -q 'data-mk-hls=' examples/astro/dist/index.html

@@ -1,0 +1,20 @@
+---
+const title = "mediakiln + Astro";
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <style>
+      body { font: 17px/1.6 system-ui, sans-serif; max-width: 48rem; margin: 2rem auto; padding: 0 1rem; }
+      video, img { width: 100%; height: auto; border-radius: 8px; }
+    </style>
+  </head>
+  <body>
+    <h1>{title}</h1>
+    <p>Plain <code>&lt;video&gt;</code> and <code>&lt;img&gt;</code> tags, optimized after <code>astro build</code> by the <code>mediakiln/astro</code> integration.</p>
+    <img src="/img/cover.jpg" alt="Gradient cover" />
+    <video controls src="/media/tour.mp4"></video>
+  </body>
+</html>

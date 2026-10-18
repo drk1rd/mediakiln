@@ -6,3 +6,4 @@ export type { Manifest, ManifestEntry } from "./manifest.js";
 export type { AssetResult, VideoResult, ImageResult, PosterResult } from "./assets.js";
 export { createLogger, type Logger, type LogLevel } from "./util/logger.js";
 export { VERSION } from "./version.js";
+export type { PluginOptions } from "./plugins/shared.js";

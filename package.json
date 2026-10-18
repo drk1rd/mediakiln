@@ -70,6 +70,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@11ty/eleventy": "^3.1.7",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.64.1",
     "@types/node": "^22.20.5",
@@ -80,10 +81,19 @@
     "tsup": "^9.0.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.71.2",
+    "vite": "^8.3.4",
     "vitest": "^5.0.5"
   },
   "optionalDependencies": {
     "ffmpeg-static": "^5.3.0",
     "ffprobe-static": "^3.1.0"
+  },
+  "peerDependencies": {
+    "vite": ">=5"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
   }
 }

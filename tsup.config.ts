@@ -5,11 +5,22 @@ export default defineConfig([
     entry: {
       index: "src/index.ts",
       cli: "src/cli.ts",
+      "plugins/vite": "src/plugins/vite.ts",
+      "plugins/astro": "src/plugins/astro.ts",
+      "plugins/eleventy": "src/plugins/eleventy.ts",
     },
     format: ["esm"],
     target: "node20",
     platform: "node",
-    dts: { entry: { index: "src/index.ts" } },
+    dts: {
+      entry: {
+        index: "src/index.ts",
+        "plugins/vite": "src/plugins/vite.ts",
+        "plugins/astro": "src/plugins/astro.ts",
+        "plugins/eleventy": "src/plugins/eleventy.ts",
+      },
+    },
+    external: ["vite"],
     clean: true,
     sourcemap: false,
     splitting: true,

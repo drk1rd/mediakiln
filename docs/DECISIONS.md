@@ -93,7 +93,7 @@ Notes on places where the implementation differs from, or fills gaps in, the ori
   builds delete their temp folder, and stale temp folders from killed runs are removed at the
   start of the next run. Cache entries are written the same way.
 - **Hard links** are used from the cache into the site where the filesystem allows (falling back
-  to copies). Tools that later modify `_mediakiln/` files *in place* would also change the
+  to copies). Tools that later modify `_mediakiln/` files _in place_ would also change the
   cache entry. Nothing in a normal deploy does that, but the cache can always be deleted.
 - **The cache key ignores the ffmpeg/Sharp version.** Bump `MEDIAKILN_CACHE_VERSION` when
   output changes in a way that matters.
@@ -117,3 +117,21 @@ Notes on places where the implementation differs from, or fills gaps in, the ori
   `src` and only gains `width`/`height`/`loading`/`decoding`.
 - **Manifest writes are skipped when nothing material changed**, so a re-run leaves the site
   byte-for-byte identical (checked in CI).
+
+## Framework plugins (M6)
+
+- **No hard dependency on any framework.** The Astro and Eleventy plugins use small structural
+  types instead of importing `astro` / `@11ty/eleventy`; Vite types are used directly (`vite` is
+  an optional peer dependency).
+- **Vite**: `apply: "build"`, runs in `closeBundle` only for the client environment (Vite 6+
+  calls it per environment) and skips failed builds. The cache dir and config file are
+  resolved against Vite's `root`.
+- **Framework bases are normalized.** Absolute-URL bases (`https://cdn/x/`) use their path;
+  relative bases (`./`) can't produce stable root-relative URLs, so they fall back to `/` with a
+  warning and can be overridden with `{ base }`.
+- **Eleventy** uses `eleventyConfig.pathPrefix` when available and skips `--serve`/`--watch`
+  unless `enabled: true`; `enabled: false` disables it everywhere.
+- **Plugin logs go through the host's logger** (Vite's, Astro's integration logger).
+- **Installing from GitHub with npm ≥ 11.19** prints an `install-scripts` warning about
+  mediakiln's `prepare` script. It's harmless: npm builds `dist/` while packing the git
+  dependency; the warning is about re-running `prepare` after install.

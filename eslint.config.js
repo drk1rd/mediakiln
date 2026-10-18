@@ -12,7 +12,7 @@ export default tseslint.config(
       "examples/**/_site/**",
       "examples/**/node_modules/**",
       "examples/**/.astro/**",
-      ".mediakiln-cache/**",
+      "**/.mediakiln-cache/**",
       "test-results/**",
       "playwright-report/**",
       "test/.tmp/**",

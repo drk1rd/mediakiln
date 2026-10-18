@@ -7,3 +7,5 @@ examples/**/_site
 package-lock.json
 test/fixtures
 test/.tmp
+examples/**/.astro
+examples/**/package-lock.json

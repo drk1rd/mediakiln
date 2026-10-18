@@ -1,43 +1,52 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>mediakiln — plain HTML example</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <header class="hero">
       <video class="bg" autoplay muted loop src="media/loop.mp4"></video>
       <div class="hero-text">
         <h1>mediakiln</h1>
-        <p>This page shipped with a 1080p MP4 that couldn't start until fully downloaded, a 2400px JPEG and a PNG. One build step later, they are below.</p>
+        <p>
+          This page shipped with a 1080p MP4 that couldn't start until fully downloaded, a 2400px
+          JPEG and a PNG. One build step later, they are below.
+        </p>
       </div>
     </header>
 
     <main>
       <section>
         <h2>Adaptive video</h2>
-        <p>Faststart MP4 plus a three-rung HLS ladder. Safari plays HLS natively, other browsers get a self-hosted hls.js, and everything else falls back to the MP4.</p>
+        <p>
+          Faststart MP4 plus a three-rung HLS ladder. Safari plays HLS natively, other browsers get
+          a self-hosted hls.js, and everything else falls back to the MP4.
+        </p>
         <video controls src="media/intro.mp4"></video>
       </section>
 
       <section>
         <h2>Responsive images</h2>
         <p>AVIF and WebP at several widths, with intrinsic dimensions and lazy loading.</p>
-        <img src="img/hero.jpg" alt="A soft multicolour gradient">
-        <img src="img/pattern.png" alt="A rule 110 cellular automaton pattern">
+        <img src="img/hero.jpg" alt="A soft multicolour gradient" />
+        <img src="img/pattern.png" alt="A rule 110 cellular automaton pattern" />
       </section>
 
       <section>
         <h2>Opt-outs</h2>
         <p>Elements with <code>data-mk-skip</code> are left exactly as written:</p>
-        <img data-mk-skip src="img/pattern.png" alt="Untouched PNG" width="300">
+        <img data-mk-skip src="img/pattern.png" alt="Untouched PNG" width="300" />
       </section>
     </main>
 
     <footer>
-      <p>Optimized by <a href="https://github.com/drk1rd/mediakiln">mediakiln</a>. View source to see the rewritten markup.</p>
+      <p>
+        Optimized by <a href="https://github.com/drk1rd/mediakiln">mediakiln</a>. View source to see
+        the rewritten markup.
+      </p>
     </footer>
   </body>
 </html>
