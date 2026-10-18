@@ -5,3 +5,4 @@ coverage
 examples/**/dist
 examples/**/_site
 package-lock.json
+test/fixtures

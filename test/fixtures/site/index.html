@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>mediakiln fixture</title>
+  </head>
+  <body>
+    <h1>Fixture</h1>
+    <img src="/img/hero.jpg" alt="Hero" class="hero">
+
+    <video src="/media/long.mp4" controls class="feature" aria-label="Long demo"></video>
+
+    <video autoplay muted loop src="media/short.mp4?v=2"></video>
+
+    <video controls data-mk-skip src="/media/short.mp4"></video>
+
+    <video controls src="https://example.com/remote.mp4"></video>
+
+    <p style="height: 2000px">Spacer</p>
+
+    <img src="img/small.png" alt="Small" style="border: 1px solid">
+    <img src="/img/oriented.jpg" alt="Oriented" data-mk-sizes="(min-width: 800px) 50vw, 100vw">
+    <img src="/img/hero.jpg" alt="Already responsive" srcset="/img/hero.jpg 3000w">
+    <picture><img src="/img/small.png" alt="In picture"></picture>
+    <img src="/img/missing.jpg" alt="Missing">
+    <img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="Inline">
+  </body>
+</html>
