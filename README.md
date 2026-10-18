@@ -13,10 +13,10 @@ npx github:drk1rd/mediakiln ./dist
 
 ```
 mediakiln v1.1.0 — ./dist
-  videos   2 processed (1 HLS, 1 MP4-only), 0 cached     62.3 MB → 41.0 MB
+  videos   2 processed (1 HLS, 1 MP4-only), 0 cached     62.3 MB → 41.6 MB
   images   4 processed, 0 cached     12.0 MB → 20.4 KB
   pages    1 rewritten
-  time   11.6s
+  time   12.1s
 ```
 
 ![The same 30-second 1080p video on a 6 Mbps connection: the raw MP4 keeps buffering and has played 3.1 s after ten seconds, the mediakiln version adapts its quality and has played 8.4 s](docs/demo.gif)
@@ -414,7 +414,23 @@ AddType video/mp2t .ts
 See [docs/BENCHMARKS.md](docs/BENCHMARKS.md) for methodology and full numbers, and
 `npx tsx scripts/bench.mts` to reproduce them.
 
-<!-- BENCH:TABLE -->
+On a test page with a background loop, a 30 s 1080p video, three 12 MP photos and a
+screenshot (synthetic media, so treat image savings as an upper bound):
+
+|                                                              | Raw           | mediakiln          |
+| ------------------------------------------------------------ | ------------- | ------------------ |
+| Lighthouse performance (mobile)                              | 72            | **100**            |
+| Largest Contentful Paint                                     | 62.5 s        | **1.65 s**         |
+| Cumulative Layout Shift                                      | 0.114         | **0**              |
+| Page weight                                                  | 18.7 MB       | 11.7 MB            |
+| Video played in the first 10 s at 6 Mbps (Chromium / WebKit) | 3.2 s / 0 s   | **8.9 s / 8.9 s**  |
+| Time to first frame at 6 Mbps (Chromium / WebKit)            | 1426 / 991 ms | **346 / 485 ms**   |
+| Time to first frame at 20 Mbps (Chromium / WebKit)           | 336 / 384 ms  | **133 / 240 ms**   |
+| mediakiln run time: first run → re-run with warm cache       |               | 12.1 s → **65 ms** |
+
+The trade-off: if a visitor's fast connection has already preloaded the raw file, its first
+frame comes sooner than lazy HLS. The benchmarks page has the details and the `data-mk-eager` /
+`data-mk-no-hls` escape hatches.
 
 ## FAQ
 
@@ -428,8 +444,8 @@ ships is the ~1 KB loader (plus hls.js on pages with HLS, in browsers without na
 
 **CI is slow?** The first run encodes everything; after that the content-hash cache makes
 unchanged media free. The GitHub Action caches `.mediakiln-cache` for you; for teams and
-multiple runners, share it with `remoteCache`. `video.encoder: "auto"` uses the GPU when
-there is one.
+multiple runners, share it with `remoteCache`. Hardware encoding (`video.encoder`) can help
+on machines with weak CPUs; on fast ones software x264 is often quicker (see the benchmarks).
 
 **Should I enable HEVC/AV1?** They cut bandwidth by roughly a third to a half for browsers that
 support them, at the cost of much longer encodes. A good fit for a handful of hero videos and
