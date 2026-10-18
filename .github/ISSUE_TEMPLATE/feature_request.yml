@@ -1,0 +1,29 @@
+name: Feature request
+description: Something mediakiln should handle, or handle differently.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the roadmap in the [changelog](https://github.com/drk1rd/mediakiln/blob/main/CHANGELOG.md)
+        and [docs/DECISIONS.md](https://github.com/drk1rd/mediakiln/blob/main/docs/DECISIONS.md)
+        first: some things are deliberately left out, and the reasons are written down there.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do, and where mediakiln gets in the way or falls short.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you'd like
+      description: The behaviour, option or output you have in mind. Example markup helps.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Workarounds you use today, or other approaches you considered.
