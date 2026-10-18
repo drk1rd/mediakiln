@@ -8,6 +8,7 @@ import {
   type AssetResult,
 } from "./assets.js";
 import { commitDir, exists, linkOrCopyDir, tempSibling } from "./util/fs.js";
+import type { RemoteCache } from "./remoteCache.js";
 
 export const META_FILE = "meta.json";
 
@@ -39,6 +40,8 @@ export interface MaterializeOptions {
   outRoot: string;
   /** Absolute cache dir, or undefined when the cache is disabled. */
   cacheDir?: string;
+  /** Shared S3-compatible cache, consulted after the local one. */
+  remote?: RemoteCache;
   key: string;
   hash: string;
   source: string;
@@ -47,8 +50,8 @@ export interface MaterializeOptions {
 export interface Materialized<R extends AssetResult> {
   meta: AssetMeta<R>;
   outDir: string;
-  /** Where the output came from: already in the site, the shared cache, or freshly built. */
-  origin: "site" | "cache" | "built";
+  /** Where the output came from: already in the site, a cache (local or remote), or built. */
+  origin: "site" | "cache" | "remote" | "built";
 }
 
 /**
@@ -65,6 +68,7 @@ export async function materialize<R extends AssetResult>(
   const inSite = await readMeta(outDir, opts.key);
   if (inSite) {
     if (opts.cacheDir) await storeInCache(outDir, path.join(opts.cacheDir, opts.key));
+    await seedRemote(opts, outDir);
     return { meta: inSite as AssetMeta<R>, outDir, origin: "site" };
   }
   if (await exists(outDir)) await fs.rm(outDir, { recursive: true, force: true });
@@ -76,7 +80,26 @@ export async function materialize<R extends AssetResult>(
       const tmp = tempSibling(outDir);
       await linkOrCopyDir(entry, tmp);
       await commitDir(tmp, outDir);
+      await seedRemote(opts, outDir);
       return { meta: cached as AssetMeta<R>, outDir, origin: "cache" };
+    }
+  }
+
+  if (opts.remote) {
+    const tmp = tempSibling(outDir);
+    try {
+      if (await opts.remote.get(opts.key, tmp)) {
+        const meta = await readMeta(tmp, opts.key);
+        if (meta) {
+          await commitDir(tmp, outDir);
+          if (opts.cacheDir) await storeInCache(outDir, path.join(opts.cacheDir, opts.key));
+          return { meta: meta as AssetMeta<R>, outDir, origin: "remote" };
+        }
+      }
+    } catch {
+      // A flaky remote must never fail the build; fall through to encoding locally.
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true }).catch(() => undefined);
     }
   }
 
@@ -94,10 +117,29 @@ export async function materialize<R extends AssetResult>(
     await fs.writeFile(path.join(tmp, META_FILE), JSON.stringify(meta, null, 2));
     await commitDir(tmp, outDir);
     if (opts.cacheDir) await storeInCache(outDir, path.join(opts.cacheDir, opts.key));
+    if (opts.remote?.write) await upload(opts.remote, opts.key, outDir);
     return { meta, outDir, origin: "built" };
   } catch (err) {
     await fs.rm(tmp, { recursive: true, force: true });
     throw err;
+  }
+}
+
+/** Upload entries that exist locally but not remotely (e.g. built before the remote was set up). */
+async function seedRemote(opts: MaterializeOptions, outDir: string): Promise<void> {
+  if (!opts.remote?.write) return;
+  try {
+    if (!(await opts.remote.has(opts.key))) await upload(opts.remote, opts.key, outDir);
+  } catch {
+    // best effort
+  }
+}
+
+async function upload(remote: RemoteCache, key: string, dir: string): Promise<void> {
+  try {
+    await remote.put(key, dir);
+  } catch {
+    // The remote cache is an optimization; a failed upload just means another encode later.
   }
 }
 

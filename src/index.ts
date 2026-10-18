@@ -1,5 +1,14 @@
 export { optimize, type OptimizeOptions } from "./optimize.js";
-export type { Config, ResolvedConfig, Rendition } from "./config.js";
+export { watch, type WatchOptions, type Watcher } from "./watch.js";
+export type {
+  Config,
+  ResolvedConfig,
+  Rendition,
+  VideoConfig,
+  ImagesConfig,
+  VideoCodec,
+  RemoteCacheConfig,
+} from "./config.js";
 export { defineConfig, resolveConfig, DEFAULT_CONFIG } from "./config.js";
 export { formatSummary, type Summary, type AssetFailure } from "./summary.js";
 export type { Manifest, ManifestEntry } from "./manifest.js";

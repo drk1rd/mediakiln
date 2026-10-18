@@ -88,8 +88,8 @@ describe("optimize() on the fixture site (video)", () => {
   });
 
   it("injects the runtime once per page with videos", () => {
-    expect(firstHtml.index.match(/_mediakiln\/runtime\/loader\.js/g)).toHaveLength(1);
-    expect(post().match(/_mediakiln\/runtime\/loader\.js/g)).toHaveLength(1);
+    expect(firstHtml.index.match(/_mediakiln\/runtime\/loader\.[0-9a-f]{8}\.js/g)).toHaveLength(1);
+    expect(post().match(/_mediakiln\/runtime\/loader\.[0-9a-f]{8}\.js/g)).toHaveLength(1);
   });
 
   it("generates HLS only when warranted", () => {
@@ -118,9 +118,13 @@ describe("optimize() on the fixture site (video)", () => {
   });
 
   it("copies the runtime with the hls.js license", () => {
-    for (const f of ["loader.js", "hls.light.min.js", "LICENSE-hls.js.txt"]) {
-      expect(existsSync(path.join(site.dir, "_mediakiln/runtime", f))).toBe(true);
-    }
+    const files = readdirSync(path.join(site.dir, "_mediakiln/runtime")).sort();
+    expect(files).toHaveLength(3);
+    expect(files[0]).toBe("LICENSE-hls.js.txt");
+    expect(files[1]).toMatch(/^hls\.light\.\d+\.\d+\.\d+\.min\.js$/);
+    expect(files[2]).toMatch(/^loader\.[0-9a-f]{8}\.js$/);
+    // The versioned loader imports the versioned hls.js next to it.
+    expect(read(`_mediakiln/runtime/${files[2]}`)).toContain(files[1]!);
     expect(read("_mediakiln/runtime/LICENSE-hls.js.txt")).toContain("Apache License");
   });
 
@@ -172,14 +176,15 @@ describe("optimize() on the fixture site (images)", () => {
 
   it("processes each local raster image once", () => {
     expect(summary.failures).toEqual([]);
-    // hero.jpg (twice in HTML, once with srcset → skipped), small.png, oriented.jpg
-    expect(summary.images.processed).toBe(3);
+    // responsive: hero.jpg, small.png (also the <picture> <img>), oriented.jpg;
+    // convert: hero.jpg for the <img srcset>
+    expect(summary.images.processed).toBe(4);
     expect(summary.videos.processed).toBe(0);
   });
 
   it("writes every format at every width", () => {
     const m = JSON.parse(read("_mediakiln/manifest.json")) as Manifest;
-    const hero = m.assets.find((a) => a.source === "img/hero.jpg")!;
+    const hero = m.assets.find((a) => a.source === "img/hero.jpg" && a.kind === "image")!;
     expect(hero.result.kind).toBe("image");
     if (hero.result.kind !== "image") return;
     expect(hero.result.variants.map((v) => `${v.width}.${v.format}`).sort()).toEqual(
@@ -188,7 +193,7 @@ describe("optimize() on the fixture site (images)", () => {
     for (const v of hero.result.variants) {
       expect(existsSync(path.join(site.dir, "_mediakiln", hero.hash, v.path))).toBe(true);
     }
-    const small = m.assets.find((a) => a.source === "img/small.png")!;
+    const small = m.assets.find((a) => a.source === "img/small.png" && a.kind === "image")!;
     expect(small.result.kind === "image" && small.result.fallbackFormat).toBe("png");
   });
 
@@ -198,26 +203,31 @@ describe("optimize() on the fixture site (images)", () => {
   });
 
   it("first image is eager, later ones lazy", () => {
-    const imgs = [...html.matchAll(/<picture>.*?<img ([^>]*)><\/picture>/g)]
-      .map((m) => m[1]!)
-      .filter((attrs) => attrs.includes("/_mediakiln/"));
-    expect(imgs).toHaveLength(3);
+    const imgs = [...html.matchAll(/<picture>.*?<img ([^>]*)><\/picture>/g)].map((m) => m[1]!);
+    expect(imgs).toHaveLength(5);
     expect(imgs[0]).not.toContain("loading=");
-    expect(imgs[1]).toContain('loading="lazy"');
-    expect(imgs[2]).toContain('loading="lazy"');
+    for (const attrs of imgs.slice(1)) expect(attrs).toContain('loading="lazy"');
   });
 
   it("shrinks image bytes substantially", () => {
     expect(summary.images.bytesAfter).toBeLessThan(summary.images.bytesBefore / 5);
   });
 
-  it("leaves unprocessable images untouched and needs no runtime", () => {
-    expect(html).toContain(
-      '<img src="/img/hero.jpg" alt="Already responsive" srcset="/img/hero.jpg 3000w">',
+  it("adds modern formats to an existing srcset and <picture>", () => {
+    // <img srcset> keeps its own candidates as the fallback; AVIF/WebP mirror the descriptors.
+    expect(html).toMatch(
+      /<picture><source type="image\/avif" srcset="\/_mediakiln\/[0-9a-f]{12}\/image\.avif 3000w"><source type="image\/webp" srcset="[^"]+ 3000w"><img src="\/img\/hero\.jpg" alt="Already responsive" srcset="\/img\/hero\.jpg 3000w" width="3000" height="2000" loading="lazy" decoding="async"><\/picture>/,
     );
-    expect(html).toContain('<picture><img src="/img/small.png" alt="In picture"></picture>');
+    // an existing <picture> isn't double-wrapped; its <img> becomes responsive
+    expect(html).toMatch(
+      /<picture><source type="image\/avif" srcset="[^"]+"[^>]*><source type="image\/webp"[^>]*><img src="\/_mediakiln\/[0-9a-f]{12}\/img-768\.png" alt="In picture"/,
+    );
+    expect(html).not.toContain("<picture><picture>");
+  });
+
+  it("leaves unprocessable images untouched and needs no runtime", () => {
     expect(html).toContain('<img src="/img/missing.jpg" alt="Missing">');
-    expect(html).not.toContain("loader.js");
+    expect(html).not.toContain("loader.");
   });
 });
 
@@ -295,7 +305,7 @@ describe("dry run", () => {
       });
       expect(s.dryRun).toBe(true);
       expect(s.videos.processed).toBe(5);
-      expect(s.images.processed).toBe(4); // 3 images + 1 author poster
+      expect(s.images.processed).toBe(5); // 3 images + 1 srcset conversion + 1 author poster
       expect(s.pages.rewritten).toBe(2);
       expect(s.videos.bytesBefore).toBeGreaterThan(0);
       expect(snapshot()).toEqual(before);

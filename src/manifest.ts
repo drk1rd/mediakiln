@@ -1,12 +1,12 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { AssetResult } from "./assets.js";
+import type { AssetJob, AssetResult } from "./assets.js";
 import { VERSION } from "./version.js";
 
 export interface ManifestEntry {
   /** Source file relative to the site dir. */
   source: string;
-  kind: "video" | "image" | "poster" | "captions" | "css" | "og";
+  kind: AssetJob["kind"] | "captions";
   hash: string;
   cached: boolean;
   bytesBefore: number;

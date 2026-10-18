@@ -55,8 +55,8 @@ export function rewriteVideo(
   } else {
     edits.push({ start: startTag.startOffset, end: startTag.endOffset, text: newStart + source });
   }
-  // Tracks now also live in the HLS stream; the loader removes these once HLS is attached so
-  // players don't list them twice. Without HLS (MP4 fallback) they keep working as-is.
+  // Tracks now also live in the HLS stream; the loader removes a <track> once the player exposes
+  // the in-stream copy, so it isn't listed twice. Without HLS (MP4 fallback) they work as-is.
   if (result.hls && out.captionsMasterUrl) {
     for (const t of ref.tracks) {
       const tl = t.el.sourceCodeLocation?.startTag;

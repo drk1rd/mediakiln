@@ -12,6 +12,9 @@ export interface CliFlags {
   dryRun?: boolean;
   verbose?: boolean;
   json?: boolean;
+  watch?: boolean;
+  report?: boolean;
+  site?: string;
 }
 
 /** Turn CLI flags into config overrides. Only flags the user actually passed are set. */
@@ -19,6 +22,8 @@ export function flagsToOverrides(flags: CliFlags): Config {
   const overrides: Config = {};
   if (flags.base !== undefined) overrides.base = String(flags.base);
   if (flags.cacheDir !== undefined) overrides.cacheDir = String(flags.cacheDir);
+  if (flags.site !== undefined) overrides.site = String(flags.site);
+  if (flags.report) overrides.report = true;
   if (flags.cache === false) overrides.cache = false;
   if (flags.concurrency !== undefined) {
     const n = Number(flags.concurrency);

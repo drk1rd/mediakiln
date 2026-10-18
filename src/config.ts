@@ -153,7 +153,7 @@ export const DEFAULT_CONFIG: ResolvedConfig = {
   remoteCache: null,
   headers: true,
   report: false,
-  markdown: { enabled: false, include: ["**/*.md", "**/*.mdx"] },
+  markdown: { enabled: false, include: ["**/*.md"] },
   video: {
     enabled: true,
     encoder: "software",

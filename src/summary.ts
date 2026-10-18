@@ -27,6 +27,7 @@ export interface Summary {
     bytesAfter: number;
   };
   pages: { scanned: number; rewritten: number };
+  stylesheets: { scanned: number; rewritten: number };
   durationMs: number;
   failures: AssetFailure[];
 }
@@ -47,6 +48,7 @@ export function emptySummary(version: string, dir: string, dryRun: boolean): Sum
     },
     images: { processed: 0, cached: 0, failed: 0, bytesBefore: 0, bytesAfter: 0 },
     pages: { scanned: 0, rewritten: 0 },
+    stylesheets: { scanned: 0, rewritten: 0 },
     durationMs: 0,
     failures: [],
   };
@@ -80,6 +82,9 @@ export function formatSummary(s: Summary): string {
     );
   }
   lines.push(`  pages  ${pad(s.pages.rewritten)} ${s.dryRun ? "to rewrite" : "rewritten"}`);
+  if (s.stylesheets.rewritten > 0) {
+    lines.push(`  css    ${pad(s.stylesheets.rewritten)} ${s.dryRun ? "to rewrite" : "rewritten"}`);
+  }
   lines.push(`  time   ${formatDuration(s.durationMs)}`);
   for (const f of s.failures) lines.push(`  ✗ ${f.kind} ${f.file}: ${f.error.split("\n")[0]}`);
   return lines.join("\n");

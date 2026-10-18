@@ -38,10 +38,22 @@ export interface PosterSettings {
   maxHeight: number;
 }
 
+export interface ConvertSettings {
+  formats: ImagesConfig["formats"];
+  quality: ImagesConfig["quality"];
+}
+
+export interface OgSettings {
+  maxSize: number;
+  quality: number;
+}
+
 export type AssetJob =
   | { kind: "video"; file: string; settings: VideoSettings }
   | { kind: "image"; file: string; settings: ImageSettings }
-  | { kind: "poster"; file: string; settings: PosterSettings };
+  | { kind: "poster"; file: string; settings: PosterSettings }
+  | { kind: "convert"; file: string; settings: ConvertSettings }
+  | { kind: "og"; file: string; settings: OgSettings };
 
 export interface OutputFile {
   /** Path relative to the asset's output folder, POSIX separators. */
@@ -106,7 +118,25 @@ export interface PosterResult {
 export type { CaptionsResult } from "./ffmpeg/captions.js";
 import type { CaptionsResult } from "./ffmpeg/captions.js";
 
-export type AssetResult = VideoResult | ImageResult | PosterResult | CaptionsResult;
+export interface ConvertResult {
+  kind: "convert";
+  width: number;
+  height: number;
+  sourceBytes: number;
+  sourceFormat: string;
+  variants: Array<OutputFile & { format: "avif" | "webp" }>;
+}
+
+export interface OgResult {
+  kind: "og";
+  width: number;
+  height: number;
+  sourceBytes: number;
+  file: OutputFile;
+}
+
+export type AssetResult =
+  VideoResult | ImageResult | PosterResult | CaptionsResult | ConvertResult | OgResult;
 
 export interface AssetMeta<R extends AssetResult = AssetResult> {
   key: string;
@@ -139,6 +169,14 @@ export function imageSettingsFor(config: ResolvedConfig): ImageSettings {
 export function posterSettingsFor(config: ResolvedConfig): PosterSettings {
   const p = config.video.poster;
   return { format: p.format, quality: p.quality, maxHeight: config.video.mp4.maxHeight };
+}
+
+export function convertSettingsFor(config: ResolvedConfig): ConvertSettings {
+  return { formats: config.images.formats, quality: config.images.quality };
+}
+
+export function ogSettingsFor(config: ResolvedConfig): OgSettings {
+  return { maxSize: 1200, quality: config.images.quality.jpeg };
 }
 
 /** Identity of a job for de-duplication: same file + same settings → processed once. */

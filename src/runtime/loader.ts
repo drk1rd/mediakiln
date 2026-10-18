@@ -7,8 +7,8 @@
  *   HLS (Safari/iOS), via a self-hosted hls.js loaded on demand where MSE is available, and
  *   otherwise from the MP4 `<source>`, which needs no JavaScript at all.
  * - Respects `prefers-reduced-motion: reduce` by not auto-playing.
- * - Captions mediakiln also put into the HLS stream (`track[data-mk-in-hls]`) are detached while
- *   HLS plays, so they aren't listed twice, and restored if playback falls back to the MP4.
+ * - Captions mediakiln also put into the HLS stream (`track[data-mk-in-hls]`) are removed once
+ *   the stream exposes them, so they aren't listed twice, and restored on MP4 fallback.
  *
  * Dependency-free and tiny; hls.js is only fetched on pages that need it, at most once.
  */
@@ -42,13 +42,37 @@ function play(video: HTMLVideoElement): void {
   if (video.autoplay && !reduceMotion) video.play()?.catch(() => {});
 }
 
-/** Captions that also ship inside the HLS stream; detached while HLS plays to avoid duplicates. */
-const parked = new WeakMap<HTMLVideoElement, Element[]>();
+/** `<track>`s removed because the HLS stream provides the same subtitles. */
+const parked = new WeakMap<HTMLVideoElement, HTMLTrackElement[]>();
 
-function parkTracks(video: HTMLVideoElement): void {
-  const tracks = Array.from(video.querySelectorAll("track[data-mk-in-hls]"));
-  tracks.forEach((t) => t.remove());
-  parked.set(video, tracks);
+/**
+ * Captions mediakiln also put into the HLS stream are kept until the player actually exposes
+ * the in-stream track (WebKit and hls.js do; Chromium's native HLS doesn't), then the duplicate
+ * `<track>` is removed, handing its `default` state to the in-stream one.
+ */
+function dedupeTracks(video: HTMLVideoElement): void {
+  const els = Array.from(video.querySelectorAll<HTMLTrackElement>("track[data-mk-in-hls]"));
+  if (!els.length) return;
+  const removed: HTMLTrackElement[] = [];
+  parked.set(video, removed);
+  const own = new Set(els.map((e) => e.track));
+  const check = () => {
+    for (const t of Array.from(video.textTracks)) {
+      if (own.has(t)) continue;
+      const dup = els.find(
+        (e) =>
+          e.isConnected &&
+          (e.srclang || "") === (t.language || "") &&
+          (!e.label || e.label === t.label),
+      );
+      if (!dup) continue;
+      if (dup.default && t.mode === "disabled") t.mode = "showing";
+      dup.remove();
+      removed.push(dup);
+    }
+  };
+  video.textTracks.addEventListener("addtrack", check);
+  check();
 }
 
 function fallbackToMp4(video: HTMLVideoElement): void {
@@ -64,7 +88,7 @@ function attach(video: HTMLVideoElement): void {
   attached.add(video);
 
   if (video.canPlayType("application/vnd.apple.mpegurl")) {
-    parkTracks(video);
+    dedupeTracks(video);
     video.src = url;
     play(video);
     return;
@@ -73,14 +97,14 @@ function attach(video: HTMLVideoElement): void {
 
   loadHls().then((Hls) => {
     if (!Hls || !Hls.isSupported()) return;
-    const hls = new Hls({ capLevelToPlayerSize: true, startLevel: -1 });
+    // The page's own <track>s already work with MSE playback; hls.js's copy would double the cues.
+    const hls = new Hls({ capLevelToPlayerSize: true, startLevel: -1, enableWebVTT: false });
     hls.on(Hls.Events.ERROR, (_event, data) => {
       if (data.fatal) {
         hls.destroy();
         fallbackToMp4(video);
       }
     });
-    parkTracks(video);
     hls.loadSource(url);
     hls.attachMedia(video);
     play(video);
