@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+.mediakiln-cache/
+*.log
+.DS_Store
+test-results/
+playwright-report/
+test/.tmp/
+examples/**/dist/
+examples/**/_site/
+examples/**/.astro/

@@ -1,0 +1,7 @@
+dist
+node_modules
+coverage
+.mediakiln-cache
+examples/**/dist
+examples/**/_site
+package-lock.json
