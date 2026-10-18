@@ -1,0 +1,70 @@
+name: Bug report
+description: mediakiln crashed, failed an asset, or produced the wrong output.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. The more of this you can fill in, the faster it gets fixed.
+        If the problem is with one file, a small sample that reproduces it helps the most.
+  - type: input
+    id: version
+    attributes:
+      label: mediakiln version
+      description: The first line of the summary, or `mediakiln --version`. For the Action or Docker image, the tag you use.
+      placeholder: v1.0.1
+    validations:
+      required: true
+  - type: input
+    id: ffmpeg
+    attributes:
+      label: ffmpeg version
+      description: The first line of `ffmpeg -version`.
+      placeholder: ffmpeg version 7.1 Copyright (c) 2000-2024 the FFmpeg developers
+    validations:
+      required: true
+  - type: dropdown
+    id: how
+    attributes:
+      label: How you run it
+      options:
+        - CLI (npx / installed)
+        - GitHub Action
+        - Docker image
+        - Vite plugin
+        - Astro integration
+        - Eleventy plugin
+        - Node API
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      description: Include the Node.js version (`node --version`).
+      placeholder: macOS 26.1, Node 22.20 / ubuntu-latest runner
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      description: The exact command or Action step, plus your mediakiln config if you have one.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: verbose
+    attributes:
+      label: "`--verbose` output"
+      description: Run the same command again with `--verbose` and paste the output. It includes the ffmpeg commands that ran.
+      render: text
+    validations:
+      required: true

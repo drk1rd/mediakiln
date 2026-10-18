@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/drk1rd/mediakiln/security/advisories/new
+    about: Please report vulnerabilities privately, not as a public issue.
+  - name: Design notes
+    url: https://github.com/drk1rd/mediakiln/blob/main/docs/DECISIONS.md
+    about: Why mediakiln works the way it does, and what is deliberately out of scope.
