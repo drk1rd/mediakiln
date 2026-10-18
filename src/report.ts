@@ -25,6 +25,10 @@ function detail(entry: Manifest["assets"][number]): string {
       return `${r.width}×${r.height}`;
     case "captions":
       return `${r.tracks} subtitle track(s)`;
+    case "gif":
+      return r.passthrough
+        ? `${r.frames}-frame GIF · kept (video wasn't smaller)`
+        : `${r.width}×${r.height} · ${r.frames} frames → MP4`;
   }
 }
 

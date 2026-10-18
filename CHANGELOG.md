@@ -6,7 +6,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Animated GIFs in `<img>` become `<video autoplay muted loop playsinline>` with an H.264 MP4
+  and a WebP poster, typically 5–20× smaller. On by default (`images.gifToVideo`); alt text
+  becomes `aria-label`, `data-mk-skip`/`data-mk-eager` work as usual, and single-frame GIFs
+  stay images. Needs ffmpeg; without it GIFs are left alone with a warning.
+
 ### Changed
+
+- `images.skip` defaults to `["**/*.svg"]`; GIFs are governed by `images.gifToVideo`. A
+  config that lists `**/*.gif` in `images.skip` keeps GIFs untouched.
 
 - The example site is deployed to GitHub Pages again: https://drk1rd.github.io/mediakiln/
 
@@ -40,7 +50,7 @@ First release.
 
 ### Not yet
 
-Ideas for after v1: animated GIF → MP4/WebM, AV1 renditions, `<img>` inside existing
+Ideas for after v1: animated GIF → MP4/WebM (done after 1.0.1), AV1 renditions, `<img>` inside existing
 `<picture>`, CSS `background-image`, a Markdown-source mode, watch mode for dev servers, and
 scrubbing thumbnail sprites.
 

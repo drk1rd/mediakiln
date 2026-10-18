@@ -53,12 +53,17 @@ export function attr(name: string, value: string | true): string {
 /**
  * Rebuild an element's start tag. Existing attributes keep their exact original source text
  * unless they are listed in `remove` or overridden in `set`; new attributes are appended in
- * the order given.
+ * the order given. `tagName` renames the element (dropping any `/>` self-closing slash, since
+ * the new element gets a real end tag).
  */
 export function rebuildStartTag(
   html: string,
   el: Element,
-  changes: { remove?: Iterable<string>; set?: Array<[string, string | true]> },
+  changes: {
+    remove?: Iterable<string>;
+    set?: Array<[string, string | true]>;
+    tagName?: string;
+  },
 ): string {
   const loc = el.sourceCodeLocation;
   if (!loc?.startTag) throw new Error(`<${el.tagName}> has no source location`);
@@ -77,8 +82,8 @@ export function rebuildStartTag(
   }
   for (const [name, value] of set) parts.push(attr(name, value));
   const original = html.slice(loc.startTag.startOffset, loc.startTag.endOffset);
-  const selfClosing = /\/\s*>$/.test(original) ? " /" : "";
-  return `<${el.tagName}${parts.length ? " " + parts.join(" ") : ""}${selfClosing}>`;
+  const selfClosing = !changes.tagName && /\/\s*>$/.test(original) ? " /" : "";
+  return `<${changes.tagName ?? el.tagName}${parts.length ? " " + parts.join(" ") : ""}${selfClosing}>`;
 }
 
 /**

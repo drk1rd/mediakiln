@@ -113,6 +113,8 @@ const configSchema = z.object({
     sizes: z.string(),
     lazy: z.boolean(),
     skip: z.array(z.string()),
+    /** Turn animated GIFs into muted looping MP4 videos. */
+    gifToVideo: z.boolean(),
     /** Optimize <img> inside an existing <picture>, including art-directed <source>s. */
     pictures: z.boolean(),
     /** Add AVIF/WebP alternatives to an existing local srcset. */
@@ -186,7 +188,8 @@ export const DEFAULT_CONFIG: ResolvedConfig = {
     quality: { avif: 50, webp: 75, jpeg: 78, png: 80 },
     sizes: "100vw",
     lazy: true,
-    skip: ["**/*.svg", "**/*.gif"],
+    skip: ["**/*.svg"],
+    gifToVideo: true,
     pictures: true,
     srcset: true,
     css: { enabled: true, include: ["**/*.css"] },

@@ -3,6 +3,7 @@ import path from "node:path";
 import pLimit from "p-limit";
 import {
   convertSettingsFor,
+  gifSettingsFor,
   imageSettingsFor,
   jobId,
   ogSettingsFor,
@@ -11,6 +12,7 @@ import {
   type AssetJob,
   type AssetResult,
   type ConvertResult,
+  type GifResult,
   type ImageResult,
   type OgResult,
   type PosterResult,
@@ -28,6 +30,8 @@ import { MIME_BY_FORMAT, addImageSets, findBackgroundUrls } from "./css.js";
 import { findFfmpeg, type FfmpegBinaries } from "./ffmpeg/binary.js";
 import { buildCaptions, captionsKey, type CaptionsResult } from "./ffmpeg/captions.js";
 import { processVideo } from "./ffmpeg/video.js";
+import { processGif } from "./ffmpeg/gif.js";
+import { rewriteGif } from "./rewrite/gif.js";
 import { writeHeaders } from "./headers.js";
 import { applyEdits, attr, parseHtml, walkElements, type Edit, type Element } from "./html.js";
 import { processConvert, processOg } from "./images/convert.js";
@@ -167,6 +171,8 @@ export async function optimize(options: OptimizeOptions): Promise<Summary> {
       videoJobs.set(ref, { video, poster });
     }
     for (const ref of page.images) imageJob(ref.file);
+    for (const ref of page.gifs)
+      plan({ kind: "gif", file: ref.file, settings: gifSettingsFor(config) });
     for (const ref of page.pictures) {
       planSource(ref.imgSource);
       for (const s of ref.sources) planSource(s.source);
@@ -201,8 +207,10 @@ export async function optimize(options: OptimizeOptions): Promise<Summary> {
     if (j.job.kind === "convert" && !(await exists(j.job.file))) jobs.delete(id);
   }
 
-  const all = [...jobs.values()];
+  let all = [...jobs.values()];
+  // GIFs come from <img> elements, so they are counted with images.
   const bucketOf = (j: PlannedJob) => (j.job.kind === "video" ? summary.videos : summary.images);
+  const usesFfmpeg = (job: AssetJob) => job.kind === "video" || job.kind === "gif";
   if (dryRun) {
     for (const j of all) {
       const bytes = (await fs.stat(j.job.file)).size;
@@ -214,6 +222,7 @@ export async function optimize(options: OptimizeOptions): Promise<Summary> {
       (p) =>
         p.videos.length +
           p.images.length +
+          p.gifs.length +
           p.pictures.length +
           p.srcsets.length +
           p.og.length +
@@ -229,13 +238,21 @@ export async function optimize(options: OptimizeOptions): Promise<Summary> {
   // 3. Process: one video encode at a time (ffmpeg is multithreaded), images in parallel.
   let bins: FfmpegBinaries | undefined;
   if (all.some((j) => j.job.kind === "video")) bins = await findFfmpeg();
+  else if (all.some((j) => j.job.kind === "gif")) {
+    // GIF conversion is a bonus: without ffmpeg, GIFs stay images as they did before.
+    bins = await findFfmpeg().catch(() => undefined);
+    if (!bins) {
+      logger.warn("ffmpeg not found, leaving animated GIFs as images");
+      all = all.filter((j) => j.job.kind !== "gif");
+    }
+  }
   if (all.length > 0) await cleanStaleTemps(outRoot);
 
   const videoLimit = pLimit(1);
   const imageLimit = pLimit(config.concurrency);
   await Promise.all(
     all.map((planned) =>
-      (planned.job.kind === "video" ? videoLimit : imageLimit)(() =>
+      (usesFfmpeg(planned.job) ? videoLimit : imageLimit)(() =>
         runJob(planned, { outRoot, cacheDir, remote, bins, logger, dir }),
       ),
     ),
@@ -365,6 +382,19 @@ export async function optimize(options: OptimizeOptions): Promise<Summary> {
     for (const ref of page.images) {
       const o = imageOut(ref.file);
       if (o) edits.push(...rewriteImage(page.html, ref, o, config));
+    }
+    for (const ref of page.gifs) {
+      const o = outcomeOf({ kind: "gif", file: ref.file, settings: gifSettingsFor(config) });
+      if (!o) continue;
+      const gifEdits = rewriteGif(
+        page.html,
+        ref,
+        { result: o.meta.result as GifResult, baseUrl: outUrl(o.meta.hash) },
+        config,
+      );
+      edits.push(...gifEdits);
+      // The runtime handles lazy loading and prefers-reduced-motion for these too.
+      if (gifEdits.length > 0) hasVideo = true;
     }
     for (const ref of page.pictures) {
       const images = new Map<string, ImageOutputs>();
@@ -519,6 +549,7 @@ const VERB: Record<AssetJob["kind"], string> = {
   poster: "processing poster",
   convert: "converting",
   og: "processing social image",
+  gif: "converting GIF",
 };
 
 async function runJob(
@@ -555,6 +586,11 @@ async function runJob(
             return processConvert(job.file, tmp, job.settings);
           case "og":
             return processOg(job.file, tmp, job.settings);
+          case "gif":
+            return processGif(
+              { bins: ctx.bins!, logger: ctx.logger },
+              { input: job.file, outDir: tmp, settings: job.settings },
+            );
         }
       },
     );
@@ -576,6 +612,8 @@ export function deliveredBytes(result: AssetResult): { before: number; after: nu
       return { before: result.sourceBytes, after: result.file.bytes };
     case "captions":
       return { before: 0, after: 0 };
+    case "gif":
+      return { before: result.sourceBytes, after: result.mp4?.bytes ?? result.sourceBytes };
     case "convert": {
       const best = Math.min(result.sourceBytes, ...result.variants.map((v) => v.bytes));
       return { before: result.sourceBytes, after: best };
@@ -613,7 +651,10 @@ async function removeOriginals(all: PlannedJob[], outRoot: string, logger: Logge
   const ok = new Set<string>();
   const keep = new Set<string>();
   for (const j of all) {
-    if (!j.outcome || j.job.kind === "convert") keep.add(j.job.file);
+    // A GIF that wasn't worth converting is still referenced by its <img>.
+    const passthroughGif =
+      j.outcome?.meta.result.kind === "gif" && j.outcome.meta.result.passthrough;
+    if (!j.outcome || j.job.kind === "convert" || passthroughGif) keep.add(j.job.file);
     else ok.add(j.job.file);
   }
   for (const file of ok) {

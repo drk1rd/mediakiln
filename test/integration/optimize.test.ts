@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { optimize, type Summary } from "../../src/index.js";
@@ -228,6 +229,106 @@ describe("optimize() on the fixture site (images)", () => {
   it("leaves unprocessable images untouched and needs no runtime", () => {
     expect(html).toContain('<img src="/img/missing.jpg" alt="Missing">');
     expect(html).not.toContain("loader.");
+  });
+});
+
+describe("optimize() with animated GIFs", () => {
+  let site: Awaited<ReturnType<typeof makeSite>>;
+  let summary: Summary;
+  let html: string;
+  const read = (rel: string) => readFileSync(path.join(site.dir, rel), "utf8");
+  const outFile = (url: string) => path.join(site.dir, url.replace(/^\//, ""));
+  const PAGE = [
+    "<!doctype html>",
+    "<body>",
+    '<img src="/img/hero.jpg" alt="Hero" data-mk-skip>',
+    '<img src="/img/anim.gif" alt="A spinning test pattern" class="demo" style="width:50%">',
+    '<img src="img/still.gif" alt="Still">',
+    '<img src="/img/anim.gif" alt="" data-mk-skip>',
+    "</body>",
+  ].join("\n");
+  const run = () =>
+    optimize({
+      dir: site.dir,
+      configFile: false,
+      cache: false,
+      include: ["gifs.html"],
+      video: FAST,
+      logger: silentLogger,
+    });
+
+  beforeAll(async () => {
+    site = await makeSite(); // generates img/anim.gif and img/still.gif with ffmpeg
+    writeFileSync(path.join(site.dir, "gifs.html"), PAGE);
+    summary = await run();
+    html = read("gifs.html");
+  });
+  afterAll(() => site.cleanup());
+
+  it("converts the animated GIF once, counted with images", () => {
+    expect(summary.failures).toEqual([]);
+    expect(summary.images.processed).toBe(1);
+    expect(summary.videos.processed).toBe(0);
+    expect(summary.images.bytesAfter).toBeLessThan(summary.images.bytesBefore); // ultrafast preset
+  });
+
+  it("rewrites the <img> into an autoplaying muted looping <video>", () => {
+    const video =
+      /<video class="demo" style="width:50%" autoplay muted loop playsinline aria-label="A spinning test pattern" width="321" height="241" poster="([^"]+\.webp)" preload="none" data-mk-lazy><source src="([^"]+video\.mp4)" type="video\/mp4"><\/video>/.exec(
+        html,
+      );
+    expect(video, html).not.toBeNull();
+    expect(existsSync(outFile(video![1]!))).toBe(true);
+    expect(html).toMatch(/_mediakiln\/runtime\/loader\.[0-9a-f]{8}\.js/);
+  });
+
+  it("writes a faststart H.264 yuv420p MP4 with even dimensions", () => {
+    const src = /<source src="([^"]+)"/.exec(html)![1]!;
+    const file = outFile(src);
+    expect(isFaststart(file), topLevelAtoms(file).join(",")).toBe(true);
+    const probe = JSON.parse(
+      execFileSync("ffprobe", [
+        "-v",
+        "error",
+        "-show_entries",
+        "stream=codec_type,codec_name,pix_fmt,width,height,nb_frames",
+        "-of",
+        "json",
+        file,
+      ]).toString(),
+    ) as { streams: Array<Record<string, string | number>> };
+    expect(probe.streams).toEqual([
+      {
+        codec_type: "video",
+        codec_name: "h264",
+        pix_fmt: "yuv420p",
+        width: 320,
+        height: 240,
+        nb_frames: "30",
+      },
+    ]);
+  });
+
+  it("leaves single-frame and skipped GIFs as images", () => {
+    expect(html).toContain('<img src="img/still.gif" alt="Still">');
+    expect(html).toContain('<img src="/img/anim.gif" alt="" data-mk-skip>');
+  });
+
+  it("records the GIF in the manifest", () => {
+    const m = JSON.parse(read("_mediakiln/manifest.json")) as Manifest;
+    expect(m.assets).toHaveLength(1);
+    expect(m.assets[0]).toMatchObject({
+      source: "img/anim.gif",
+      kind: "gif",
+      result: { kind: "gif", width: 321, height: 241, frames: 30, duration: 3 },
+    });
+  });
+
+  it("is idempotent", async () => {
+    const second = await run();
+    expect(second.images.processed + second.images.cached).toBe(0);
+    expect(second.pages.rewritten).toBe(0);
+    expect(read("gifs.html")).toBe(html);
   });
 });
 

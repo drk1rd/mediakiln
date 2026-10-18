@@ -136,6 +136,42 @@ Notes on places where the implementation differs from, or fills gaps in, the ori
   mediakiln's `prepare` script. It's harmless: npm builds `dist/` while packing the git
   dependency; the warning is about re-running `prepare` after install.
 
+## Animated GIFs (post-v1)
+
+- **Only animated GIFs convert.** The scanner reads the frame count with Sharp; single-frame
+  (and unreadable) GIFs stay `<img>`s. They aren't sent through the raster pipeline either,
+  since a still GIF is usually a tiny icon where `<picture>` buys little.
+- **Its own job kind (`gif`)**, so the cache key differs from an image or video job of the same
+  file. Encoding reuses `video.mp4.crf`/`preset`/`maxHeight` and `video.poster.format`/
+  `quality` rather than adding a parallel set of knobs.
+- **Output is H.264 High, yuv420p, no audio, faststart**, scaled with the same even-dimension,
+  short-side cap as videos. Frame timing is kept (`-fps_mode vfr`, or `-vsync vfr` before
+  ffmpeg 5.1) instead of padding to a constant rate; ffmpeg's GIF demuxer already treats
+  near-zero delays as 100 ms, as browsers do. No HLS: GIF-replacement clips are short.
+- **Transparency is lost** (yuv420p has no alpha): transparent pixels show whatever colour the
+  GIF's palette stores for them. Use `data-mk-skip` on GIFs that rely on transparency.
+- **Never bigger**: if the MP4 isn't smaller than the GIF, the `<img>` is left alone and, with
+  `keepOriginals: false`, the GIF isn't deleted.
+- **Markup**: `autoplay muted loop playsinline` (all four are needed for inline autoplay on
+  iOS). `<img>`-only attributes (`src`, `alt`, `srcset`, `sizes`, `loading`, `decoding`,
+  `fetchpriority`, `referrerpolicy`, `usemap`, `ismap`, `longdesc`) are dropped; everything else
+  keeps its original source text. Non-empty `alt` becomes `aria-label`, `alt=""` becomes
+  `aria-hidden="true"`, unless the element is already labelled. Intrinsic `width`/`height` are
+  the GIF's own, not the even-rounded video size.
+- **Loading** follows the image rules: the first `<img>` on the page, `data-mk-eager`,
+  `fetchpriority="high"` or `loading="eager"` get `preload="auto"`; others get
+  `preload="none" data-mk-lazy`. Browsers may still start fetching an `autoplay` video early,
+  which is no worse than the GIF it replaces. The runtime loader is injected so lazy
+  activation and `prefers-reduced-motion` (which a GIF could never honour) apply.
+- **Requires `video.enabled`**, so `--no-video` also turns it off. If ffmpeg is missing and no
+  real video needs it, GIFs are left as they are with a warning instead of failing the build.
+- **Counted with images** in the summary (they come from `<img>`); the manifest records them as
+  `kind: "gif"`.
+- **`MEDIAKILN_CACHE_VERSION` is not bumped**: existing job kinds produce the same outputs, and
+  the new kind can't collide with old cache entries because the kind is part of the key.
+- **`images.skip` no longer lists `**/*.gif` by default**, so the new option is what decides;
+  an explicit skip glob still wins.
+
 ## Polish (M7)
 
 - **Docker image** is `node:22-slim` + Debian's ffmpeg, multi-arch (amd64/arm64), built and
