@@ -48,7 +48,7 @@ runs:
 
     - name: Restore cache
       if: inputs.cache == 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ${{ github.workspace }}/.mediakiln-cache
         key: mediakiln-${{ runner.os }}-${{ hashFiles(format('{0}/**/*.mp4', inputs.dir), format('{0}/**/*.mov', inputs.dir), format('{0}/**/*.m4v', inputs.dir), format('{0}/**/*.webm', inputs.dir), format('{0}/**/*.mkv', inputs.dir), format('{0}/**/*.jpg', inputs.dir), format('{0}/**/*.jpeg', inputs.dir), format('{0}/**/*.png', inputs.dir), format('{0}/**/*.webp', inputs.dir), format('{0}/**/*.avif', inputs.dir), format('{0}/**/*.tif*', inputs.dir)) }}
